@@ -13,7 +13,7 @@
   :root{
     --noir:#0A0A0C; --carte:#141418; --carte2:#1B1B20; --bord:#26262C;
     --blanc:#F7F7F4; --gris:#8E8E96; --gris2:#5E5E66;
-    --or:#D9A441; --or2:#F2CE86; --bleu:#8FC6F2; --rouge:#CB3126;
+    --or:#D9A441; --or2:#F2CE86; --bleu:#8FC6F2; --rouge:#E63A2B;
     --voile:rgba(10,10,12,.94); --ombre:rgba(0,0,0,.5);
     --r:16px; --safe:env(safe-area-inset-bottom,0px); --safeT:env(safe-area-inset-top,0px);
   }
@@ -265,10 +265,11 @@
     </div>
   </div>
   <div class="barre-bas">
-    <div class="duo">
+    <div class="duo" style="margin-bottom:8px">
       <button class="btn" onclick="telechargerCanvas()">⬇ Télécharger</button>
       <button class="btn sec" onclick="envoyerCanvasTelegram()">📤 Telegram</button>
     </div>
+    <button class="btn sec" id="btnSave" onclick="enregistrerModifs()">💾 Enregistrer les modifications</button>
   </div>
 </div>
 <div class="toast" id="toast"></div>
@@ -409,9 +410,11 @@ function tgCfg(){const t=localStorage.getItem('invast_tg_tok'),c=localStorage.ge
   if(!t||!c){toast('Ajoute Telegram dans ⚙');return null}return {t,c};}
 async function envoyerTelegram(blob,caption){
   const cfg=tgCfg();if(!cfg)return;
-  const fd=new FormData();fd.append('chat_id',cfg.c);fd.append('photo',blob,'carte.png');
+  const fd=new FormData();fd.append('chat_id',cfg.c);
+  // sendDocument = fichier PNG intact (sendPhoto recompresse en JPEG et ramollit le texte)
+  fd.append('document',blob,'flash-actu.png');
   fd.append('caption',(caption||'').slice(0,1024));
-  try{const r=await fetch('https://api.telegram.org/bot'+cfg.t+'/sendPhoto',{method:'POST',body:fd});
+  try{const r=await fetch('https://api.telegram.org/bot'+cfg.t+'/sendDocument',{method:'POST',body:fd});
     toast(r.ok?'📤 Envoyé sur Telegram':'Échec de l\'envoi');}catch(e){toast('Échec de l\'envoi');}
 }
 async function envoyerArchiveTelegram(run,v){
@@ -425,13 +428,16 @@ function envoyerCanvasTelegram(){
 /* ---------- éditeur ---------- */
 const T={W:1080,H:1350,
   handle:{txt:'arnaud_saudrais',size:28,x:57,y:62,ph:28,pv:9},
-  sticker:{txt:'Flash Actu',size:34,ph:18,pv:12,r:10,bg:'#CB3126'},
+  sticker:{txt:'Flash Actu',size:34,ph:18,pv:12,r:10,bg:'#E63A2B'},
   titre:{max:66,min:46,lh:1.27,mg:75,md:60,mb:90,lmax:5,gap:38},
   degrade:{debut:.30,plein:.78}};
 let ED={img:null,zoom:1,ox:0,oy:0,base:1,drag:null,actu:null,varte:null};
-const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+let ED_RUN='';
+const cv=document.getElementById('cv'),ctx=cv.getContext('2d',{alpha:false});
+ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
 
 async function ouvrirEditeur(run,actu,v){
+  ED_RUN=run;
   document.getElementById('ed').style.display='block';document.body.style.overflow='hidden';
   edTitre.value=v.titre;edCaption.value=assurerCTA(v.caption||'');
   edSource.textContent='Image : '+(v.source_image||'—');
@@ -483,14 +489,14 @@ function rendre(){
   ctx.fillStyle='#000';ctx.fillText(hd.txt,hd.x+hd.ph,hd.y+ph/2+2);
   const ti=T.titre,texte=edTitre.value.trim();
   const largMax=T.W-ti.mg-ti.md;let size=ti.max,lignes;
-  for(;;){ctx.font='700 '+size+'px Poppins';lignes=couper(texte,largMax);
+  for(;;){ctx.font='800 '+size+'px Poppins';lignes=couper(texte,largMax);
     if(lignes.length<=ti.lmax||size<=ti.min)break;size-=2;}
   const lh=Math.round(size*ti.lh),yT=T.H-ti.mb-lh*lignes.length;
   const st=T.sticker;ctx.font='800 '+st.size+'px Poppins';
   const sw=ctx.measureText(st.txt).width+2*st.ph,sh=st.size+2*st.pv,yS=yT-ti.gap-sh;
   rr(ti.mg,yS,sw,sh,st.r);ctx.fillStyle=st.bg;ctx.fill();
   ctx.fillStyle='#fff';ctx.fillText(st.txt,ti.mg+st.ph,yS+sh/2+2);
-  ctx.font='700 '+size+'px Poppins';ctx.fillStyle='#fff';
+  ctx.font='800 '+size+'px Poppins';ctx.fillStyle='#fff';
   lignes.forEach((l,i)=>ctx.fillText(l,ti.mg,yT+i*lh+lh/2+2));
 }
 function couper(txt,max){
@@ -603,6 +609,44 @@ async function genererCaption(mode){
     txt=txt.split('\n').filter(l=>!/^\s*#\w/.test(l)).join('\n');  // sécurité anti-hashtags
     edCaption.value=assurerCTA(txt)||'(échec, réessaie)';
   }catch(e){edCaption.value='';toast('Échec de la génération');}
+}
+/* ---------- enregistrer dans l'archive ---------- */
+const b64=blob=>new Promise(r=>{const fr=new FileReader();
+  fr.onload=()=>r(fr.result.split(',')[1]);fr.readAsDataURL(blob)});
+async function putFichier(chemin,contenuB64,message){
+  let sha=null;
+  const g=await fetch(API+'/contents/'+chemin,{headers:H()});
+  if(g.ok) sha=(await g.json()).sha;
+  const r=await fetch(API+'/contents/'+chemin,{method:'PUT',
+    headers:{...H(),'Content-Type':'application/json'},
+    body:JSON.stringify({message,content:contenuB64,sha:sha||undefined})});
+  if(!r.ok) throw new Error(await r.text());
+}
+async function enregistrerModifs(){
+  if(!ED_RUN||!ED.varte) return toast('Rien à enregistrer');
+  const b=document.getElementById('btnSave');
+  b.disabled=true;b.textContent='Enregistrement…';
+  try{
+    // 1. la carte retouchée écrase l'originale dans l'archive
+    const blob=await new Promise(res=>cv.toBlob(res,'image/png'));
+    await putFichier('archive/'+ED_RUN+'/'+ED.varte.carte,await b64(blob),
+      'edit carte '+ED.varte.carte+' [skip ci]');
+    // 2. titre + description mis à jour dans le manifest
+    const g=await fetch(API+'/contents/archive/'+ED_RUN+'/manifest.json',{headers:H()});
+    const meta=await g.json();
+    const m=JSON.parse(decodeURIComponent(escape(atob(meta.content.replace(/\n/g,'')))));
+    m.actus.forEach(a=>a.variantes.forEach(v=>{
+      if(v.carte===ED.varte.carte){v.titre=edTitre.value;v.caption=edCaption.value;}}));
+    const txt=JSON.stringify(m,null,1);
+    await fetch(API+'/contents/archive/'+ED_RUN+'/manifest.json',{method:'PUT',
+      headers:{...H(),'Content-Type':'application/json'},
+      body:JSON.stringify({message:'edit manifest [skip ci]',
+        content:btoa(unescape(encodeURIComponent(txt))),sha:meta.sha})});
+    ED.varte.titre=edTitre.value;ED.varte.caption=edCaption.value;
+    toast('💾 Modifications enregistrées');
+    setTimeout(chargerHistorique,1500);
+  }catch(e){toast('Échec de l\'enregistrement');}
+  b.disabled=false;b.textContent='💾 Enregistrer les modifications';
 }
 function copierCaption(){navigator.clipboard.writeText(edCaption.value);toast('Description copiée');}
 
