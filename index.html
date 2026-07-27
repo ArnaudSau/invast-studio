@@ -110,6 +110,12 @@
       <div><label>Chat ID Telegram</label>
         <input type="text" id="cfgTgChat" placeholder="123456789"></div>
     </div>
+    <div class="row" style="margin-bottom:14px">
+      <div><label>URL du proxy Cloudflare Worker — pour la recherche d'images (voir ui/worker.js du repo)</label>
+        <input type="text" id="cfgProxy" placeholder="https://invast-proxy.xxxx.workers.dev"></div>
+      <div><label>Clé Brave Search — meilleure recherche d'images (optionnel)</label>
+        <input type="password" id="cfgBrave" placeholder="BSA…"></div>
+    </div>
     <button class="btn" onclick="sauverCfg()">Enregistrer</button>
   </div>
 
@@ -216,13 +222,17 @@ function basculerCfg(){const c=document.getElementById('cfg');
   document.getElementById('cfgPat').value=TOKEN;
   document.getElementById('cfgClaude').value=localStorage.getItem('invast_claude')||'';
   document.getElementById('cfgTgTok').value=localStorage.getItem('invast_tg_tok')||'';
-  document.getElementById('cfgTgChat').value=localStorage.getItem('invast_tg_chat')||'';}
+  document.getElementById('cfgTgChat').value=localStorage.getItem('invast_tg_chat')||'';
+  document.getElementById('cfgProxy').value=localStorage.getItem('invast_proxy')||'';
+  document.getElementById('cfgBrave').value=localStorage.getItem('invast_brave')||'';}
 function sauverCfg(){
   const p=document.getElementById('cfgPat').value.trim();
   if(p){TOKEN=p;localStorage.setItem('invast_pat',p);}
   localStorage.setItem('invast_claude',document.getElementById('cfgClaude').value.trim());
   localStorage.setItem('invast_tg_tok',document.getElementById('cfgTgTok').value.trim());
   localStorage.setItem('invast_tg_chat',document.getElementById('cfgTgChat').value.trim());
+  localStorage.setItem('invast_proxy',document.getElementById('cfgProxy').value.trim().replace(/\/+$/,''));
+  localStorage.setItem('invast_brave',document.getElementById('cfgBrave').value.trim());
   document.getElementById('cfg').style.display='none';toast('Réglages enregistrés');init();}
 async function init(){
   if(!TOKEN){basculerCfg();return}
@@ -440,24 +450,49 @@ function telechargerCanvas(){
     a.href=URL.createObjectURL(b);a.download='flash-actu-'+Date.now()+'.png';a.click();},'image/png');
 }
 
-/* ---------- recherche Google Images ---------- */
+/* ---------- recherche d'images (via TON proxy Cloudflare) ---------- */
+function proxyBase(){return localStorage.getItem('invast_proxy')||''}
+function viaProxy(url,opts){
+  const p=proxyBase();
+  if(p) return fetch(p+'/?url='+encodeURIComponent(url),opts);
+  // secours (peu fiable) : allorigins
+  return fetch('https://api.allorigins.win/raw?url='+encodeURIComponent(url));
+}
+async function viaProxyTexte(url,opts){
+  const p=proxyBase();
+  if(p){const r=await fetch(p+'/?url='+encodeURIComponent(url),opts);return r.text();}
+  const r=await fetch('https://api.allorigins.win/get?url='+encodeURIComponent(url));
+  return (await r.json()).contents||'';
+}
 let NBIMG=10,RESULTATS=[];
 function setNbImg(n,btn){NBIMG=n;
   btn.parentElement.querySelectorAll('button').forEach(b=>b.classList.remove('on'));
   btn.classList.add('on');afficherResultats();}
 async function chercherImages(){
   const q=document.getElementById('qImg').value.trim();if(!q)return;
-  document.getElementById('imgHint').textContent='Recherche en cours…';
+  if(!proxyBase()){document.getElementById('imgHint').textContent='⚠️ Configure l\'URL de ton proxy Cloudflare dans ⚙ Réglages (voir ui/worker.js).';}
+  else document.getElementById('imgHint').textContent='Recherche en cours…';
   RESULTATS=[];
-  try{RESULTATS=await googleImages(q);}catch(e){}
+  try{RESULTATS=await braveImages(q);}catch(e){}
+  if(!RESULTATS.length){try{RESULTATS=await googleImages(q);}catch(e){}}
   if(!RESULTATS.length){try{RESULTATS=await bingImages(q);}catch(e){}}
   document.getElementById('imgHint').textContent=RESULTATS.length
     ?RESULTATS.length+' images trouvées — clique pour l\'utiliser'
-    :'Rien trouvé (le proxy a peut-être été bloqué, réessaie).';
+    :'Rien trouvé. Vérifie le proxy dans ⚙ Réglages, ou réessaie.';
   afficherResultats();
 }
+async function braveImages(q){
+  const cle=localStorage.getItem('invast_brave');
+  if(!cle||!proxyBase())return [];
+  const r=await viaProxy('https://api.search.brave.com/res/v1/images/search?q='+encodeURIComponent(q)+'&count=30&safesearch=off&search_lang=fr&country=FR',
+    {headers:{'X-Subscription-Token':cle,'Accept':'application/json'}});
+  if(!r.ok)return [];
+  const j=await r.json();
+  return (j.results||[]).map(it=>({thumb:(it.thumbnail||{}).src||'',url:(it.properties||{}).url||''}))
+    .filter(x=>x.url&&x.thumb);
+}
 async function googleImages(q){
-  const html=await (await fetch(prox('https://www.google.com/search?q='+encodeURIComponent(q)+'&tbm=isch&hl=fr&gl=fr'))).text();
+  const html=await viaProxyTexte('https://www.google.com/search?q='+encodeURIComponent(q)+'&tbm=isch&hl=fr&gl=fr');
   const re=/\["(https?:\/\/[^"]{10,400}?\.(?:jpe?g|png|webp))",\s*\d+,\s*\d+\]/g;
   let m,thumb=null;const out=[];
   while((m=re.exec(html))&&out.length<30){
@@ -469,7 +504,7 @@ async function googleImages(q){
   return out;
 }
 async function bingImages(q){
-  const html=await (await fetch(prox('https://www.bing.com/images/search?q='+encodeURIComponent(q)))).text();
+  const html=await viaProxyTexte('https://www.bing.com/images/async?q='+encodeURIComponent(q)+'&first=0&count=35&mmasync=1');
   const re=/m="([^"]+)"/g;let m;const out=[];
   while((m=re.exec(html))&&out.length<30){
     try{const d=JSON.parse(m[1].replace(/&quot;/g,'"').replace(/&amp;/g,'&'));
@@ -489,7 +524,7 @@ function afficherResultats(){
 async function utiliserImage(url){
   document.getElementById('imgHint').textContent='Chargement de l\'image…';
   try{
-    let r=await fetch(prox(url));
+    let r=await viaProxy(url);
     if(!r.ok)throw 0;
     await chargerBlob(await r.blob());
     document.getElementById('imgHint').textContent='Image remplacée ✔ ('+dom(url)+')';
