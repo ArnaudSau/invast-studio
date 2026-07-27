@@ -396,7 +396,7 @@ function blocRun(nom,m){
 const echap=s=>(s||'').replace(/</g,'&lt;');
 const dom=u=>{try{return new URL(u).hostname.replace('www.','')}catch(e){return 'source'}};
 async function chargerImage(chemin,imgEl){
-  try{const r=await fetch(API+'/contents/'+chemin,{headers:H(true)});
+  try{const r=await fetch(API+'/contents/'+chemin+'?_='+Date.now(),{headers:H(true)});
     imgEl.src=URL.createObjectURL(await r.blob());}catch(e){}
 }
 async function telechargerFichier(chemin,nom){
@@ -613,39 +613,53 @@ async function genererCaption(mode){
 /* ---------- enregistrer dans l'archive ---------- */
 const b64=blob=>new Promise(r=>{const fr=new FileReader();
   fr.onload=()=>r(fr.result.split(',')[1]);fr.readAsDataURL(blob)});
-async function putFichier(chemin,contenuB64,message){
-  let sha=null;
-  const g=await fetch(API+'/contents/'+chemin,{headers:H()});
-  if(g.ok) sha=(await g.json()).sha;
-  const r=await fetch(API+'/contents/'+chemin,{method:'PUT',
-    headers:{...H(),'Content-Type':'application/json'},
-    body:JSON.stringify({message,content:contenuB64,sha:sha||undefined})});
-  if(!r.ok) throw new Error(await r.text());
+/* API Git de GitHub : accepte les fichiers > 1 Mo (contrairement à /contents)
+   et écrit la carte + le manifest en UN SEUL commit. */
+async function gh(chemin,opts){
+  const r=await fetch(API+chemin,{headers:{...H(),'Content-Type':'application/json'},...(opts||{})});
+  if(!r.ok) throw new Error(chemin.split('/').pop()+' '+r.status);
+  return r.json();
+}
+async function commitFichiers(fichiers,message){
+  const arbre=[];
+  for(const f of fichiers){
+    const b=await gh('/git/blobs',{method:'POST',
+      body:JSON.stringify({content:f.b64,encoding:'base64'})});
+    arbre.push({path:f.chemin,mode:'100644',type:'blob',sha:b.sha});
+  }
+  const ref=await gh('/git/ref/heads/main');
+  const parent=ref.object.sha;
+  const cp=await gh('/git/commits/'+parent);
+  const tree=await gh('/git/trees',{method:'POST',
+    body:JSON.stringify({base_tree:cp.tree.sha,tree:arbre})});
+  const commit=await gh('/git/commits',{method:'POST',
+    body:JSON.stringify({message,tree:tree.sha,parents:[parent]})});
+  await gh('/git/refs/heads/main',{method:'PATCH',body:JSON.stringify({sha:commit.sha})});
 }
 async function enregistrerModifs(){
   if(!ED_RUN||!ED.varte) return toast('Rien à enregistrer');
   const b=document.getElementById('btnSave');
   b.disabled=true;b.textContent='Enregistrement…';
   try{
-    // 1. la carte retouchée écrase l'originale dans l'archive
+    // 1. la carte retouchée
     const blob=await new Promise(res=>cv.toBlob(res,'image/png'));
-    await putFichier('archive/'+ED_RUN+'/'+ED.varte.carte,await b64(blob),
-      'edit carte '+ED.varte.carte+' [skip ci]');
-    // 2. titre + description mis à jour dans le manifest
-    const g=await fetch(API+'/contents/archive/'+ED_RUN+'/manifest.json',{headers:H()});
-    const meta=await g.json();
-    const m=JSON.parse(decodeURIComponent(escape(atob(meta.content.replace(/\n/g,'')))));
+    const carteB64=await b64(blob);
+    // 2. titre + description mis à jour dans le manifest (lecture en brut = fiable)
+    const txtM=await (await fetch(API+'/contents/archive/'+ED_RUN+'/manifest.json',
+      {headers:H(true)})).text();
+    const m=JSON.parse(txtM);
     m.actus.forEach(a=>a.variantes.forEach(v=>{
       if(v.carte===ED.varte.carte){v.titre=edTitre.value;v.caption=edCaption.value;}}));
-    const txt=JSON.stringify(m,null,1);
-    await fetch(API+'/contents/archive/'+ED_RUN+'/manifest.json',{method:'PUT',
-      headers:{...H(),'Content-Type':'application/json'},
-      body:JSON.stringify({message:'edit manifest [skip ci]',
-        content:btoa(unescape(encodeURIComponent(txt))),sha:meta.sha})});
+    const manB64=btoa(unescape(encodeURIComponent(JSON.stringify(m,null,1))));
+    // 3. un seul commit
+    await commitFichiers([
+      {chemin:'archive/'+ED_RUN+'/'+ED.varte.carte,b64:carteB64},
+      {chemin:'archive/'+ED_RUN+'/manifest.json',b64:manB64}],
+      'edit '+ED.varte.carte+' [skip ci]');
     ED.varte.titre=edTitre.value;ED.varte.caption=edCaption.value;
     toast('💾 Modifications enregistrées');
-    setTimeout(chargerHistorique,1500);
-  }catch(e){toast('Échec de l\'enregistrement');}
+    setTimeout(chargerHistorique,2000);
+  }catch(e){toast('Échec : '+String(e.message||e).slice(0,50));}
   b.disabled=false;b.textContent='💾 Enregistrer les modifications';
 }
 function copierCaption(){navigator.clipboard.writeText(edCaption.value);toast('Description copiée');}
