@@ -15,10 +15,10 @@
   *{margin:0;padding:0;box-sizing:border-box}
   body{background:var(--noir);color:var(--blanc);font-family:'Poppins',sans-serif;min-height:100vh}
   .wrap{max-width:1180px;margin:0 auto;padding:34px 22px 80px}
-  header{display:flex;align-items:baseline;gap:14px;margin-bottom:38px}
+  header{display:flex;align-items:baseline;gap:14px;margin-bottom:38px;flex-wrap:wrap}
   header h1{font-size:26px;font-weight:800;letter-spacing:.5px}
   header h1 span{color:var(--or)}
-  header small{color:var(--gris);font-weight:500}
+  header small{color:var(--gris);font-weight:500;flex:1}
   .card{background:var(--noir2);border:1px solid #232328;border-radius:16px;padding:26px;margin-bottom:26px}
   h2{font-size:15px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--or);margin-bottom:18px}
   label{font-size:13px;color:var(--gris);display:block;margin-bottom:6px}
@@ -38,39 +38,51 @@
   .btn.ghost{background:transparent;color:var(--gris);border:1px solid #2a2a30;padding:9px 14px;font-size:13px}
   .btn.ghost:hover{color:var(--blanc);border-color:var(--gris)}
   .btn:disabled{opacity:.45;cursor:default}
-  .mode{display:flex;gap:0;border:1px solid #2a2a30;border-radius:10px;overflow:hidden;width:max-content;margin-bottom:16px}
+  .mode{display:flex;border:1px solid #2a2a30;border-radius:10px;overflow:hidden;width:max-content;margin-bottom:16px}
   .mode button{background:transparent;color:var(--gris);border:none;padding:10px 26px;font-family:inherit;font-weight:600;cursor:pointer;font-size:14px}
   .mode button.on{background:var(--or);color:var(--noir)}
+  .mode.mini button{padding:7px 16px;font-size:12.5px}
   #statut{margin-top:16px;font-size:13.5px;color:var(--bleu);display:none;align-items:center;gap:10px}
   .dot{width:9px;height:9px;border-radius:50%;background:var(--or);animation:pulse 1.2s infinite}
   @keyframes pulse{50%{opacity:.25}}
-  .runs{display:flex;flex-direction:column;gap:26px}
-  .run-titre{font-size:13px;color:var(--gris);margin-bottom:12px;display:flex;gap:10px;align-items:center}
+  .runs{display:flex;flex-direction:column;gap:30px}
+  .run-titre{font-size:13px;color:var(--gris);margin-bottom:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
   .run-titre b{color:var(--blanc);font-weight:600}
   .badge{font-size:11px;padding:2px 10px;border-radius:20px;border:1px solid var(--bleu);color:var(--bleu)}
   .badge.or{border-color:var(--or);color:var(--or)}
+  .actu-src{font-size:12px;color:var(--gris);margin:8px 0 10px}
+  .actu-src a{color:var(--bleu);text-decoration:none;margin-right:12px}
+  .actu-src a:hover{text-decoration:underline}
   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:16px}
   .post{background:var(--noir);border:1px solid #232328;border-radius:12px;overflow:hidden}
   .post img{width:100%;display:block;aspect-ratio:4/5;object-fit:cover;background:#1a1a1e}
-  .post .acts{display:flex;gap:8px;padding:10px}
-  .post .acts .btn{flex:1;justify-content:center;padding:8px 4px;font-size:12.5px}
+  .post .acts{display:flex;gap:6px;padding:10px}
+  .post .acts .btn{flex:1;justify-content:center;padding:8px 2px;font-size:12px}
   .vide{color:var(--gris);font-size:14px}
   /* ------- éditeur ------- */
-  #editeur{position:fixed;inset:0;background:rgba(5,5,7,.94);display:none;z-index:50;overflow:auto}
-  #editeur .inner{max-width:1100px;margin:30px auto;padding:0 20px;display:flex;gap:30px;flex-wrap:wrap}
+  #editeur{position:fixed;inset:0;background:rgba(5,5,7,.96);display:none;z-index:50;overflow:auto}
+  #editeur .inner{max-width:1140px;margin:26px auto;padding:0 18px 60px;display:flex;gap:28px;flex-wrap:wrap}
   #scene{position:relative;width:min(432px,92vw);aspect-ratio:4/5;height:auto;flex:none;
-    border-radius:12px;overflow:hidden;
-    box-shadow:0 8px 50px rgba(0,0,0,.6);cursor:grab;touch-action:none}
+    border-radius:12px;overflow:hidden;box-shadow:0 8px 50px rgba(0,0,0,.6);cursor:grab;touch-action:none}
   #scene:active{cursor:grabbing}
   #scene canvas{width:100%;height:100%;display:block}
   .panneau{flex:1;min-width:300px}
-  .panneau h2{margin-top:6px}
-  .panneau .bloc{margin-bottom:22px}
+  .panneau .bloc{margin-bottom:20px}
   input[type=range]{width:100%;accent-color:var(--or)}
   .hint{font-size:12px;color:var(--gris);margin-top:6px}
-  .fer{position:absolute;top:18px;right:24px;font-size:30px;color:var(--gris);cursor:pointer;background:none;border:none}
+  .fer{position:absolute;top:14px;right:20px;font-size:30px;color:var(--gris);cursor:pointer;background:none;border:none;z-index:51}
   .fer:hover{color:var(--blanc)}
   a{color:var(--bleu)}
+  /* recherche images */
+  #resImgs{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px;margin-top:12px}
+  #resImgs img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;cursor:pointer;
+    border:2px solid transparent;background:#1a1a1e}
+  #resImgs img:hover{border-color:var(--or)}
+  .mini-btns{display:flex;gap:8px;flex-wrap:wrap}
+  .mini-btns .btn{padding:8px 14px;font-size:12.5px}
+  #cfg{display:none}
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--or);
+    color:var(--noir);font-weight:700;padding:12px 26px;border-radius:12px;z-index:99;display:none}
 </style>
 </head>
 <body>
@@ -78,16 +90,27 @@
   <header>
     <h1>INVAST <span>STUDIO</span></h1>
     <small>Flash Actu — générateur & éditeur</small>
+    <button class="btn ghost" onclick="basculerCfg()">⚙ Réglages</button>
   </header>
 
-  <!-- ===== TOKEN ===== -->
-  <div class="card" id="cfgToken">
-    <h2>Connexion GitHub</h2>
-    <label>Token d'accès (fine-grained PAT — repo flash-actu, permissions Contents & Actions en lecture/écriture). Il reste dans TON navigateur, il n'est envoyé qu'à api.github.com.</label>
-    <div class="row">
-      <div style="flex:3"><input type="password" id="pat" placeholder="github_pat_…"></div>
-      <div style="flex:0"><button class="btn" onclick="sauverToken()">Connecter</button></div>
+  <!-- ===== RÉGLAGES ===== -->
+  <div class="card" id="cfg">
+    <h2>Réglages <span style="color:var(--gris);text-transform:none;letter-spacing:0;font-weight:500">(stockés uniquement dans ce navigateur)</span></h2>
+    <div class="bloc" style="margin-bottom:14px">
+      <label>Token GitHub (fine-grained : repo flash-actu, Contents + Actions en R/W) — requis</label>
+      <input type="password" id="cfgPat" placeholder="github_pat_…">
     </div>
+    <div class="bloc" style="margin-bottom:14px">
+      <label>Clé API Anthropic — pour régénérer les descriptions (optionnel)</label>
+      <input type="password" id="cfgClaude" placeholder="sk-ant-…">
+    </div>
+    <div class="row" style="margin-bottom:14px">
+      <div><label>Bot Telegram (token) — pour l'envoi manuel (optionnel)</label>
+        <input type="password" id="cfgTgTok" placeholder="123456:ABC…"></div>
+      <div><label>Chat ID Telegram</label>
+        <input type="text" id="cfgTgChat" placeholder="123456789"></div>
+    </div>
+    <button class="btn" onclick="sauverCfg()">Enregistrer</button>
   </div>
 
   <!-- ===== LANCER ===== -->
@@ -99,7 +122,7 @@
     </div>
     <div id="zoneSujet" style="display:none;margin-bottom:16px">
       <label>Ton sujet (l'IA fact-checke puis rédige dessus)</label>
-      <textarea id="sujet" placeholder="Ex : La BCE vient de baisser ses taux de 0,25 point, qu'est-ce que ça change pour ton épargne…"></textarea>
+      <textarea id="sujet" placeholder="Ex : La BCE vient de baisser ses taux de 0,25 point…"></textarea>
     </div>
     <div class="row" style="align-items:flex-end">
       <div><label>Nombre de posts</label>
@@ -123,7 +146,33 @@
 <div id="editeur">
   <button class="fer" onclick="fermerEditeur()">✕</button>
   <div class="inner">
-    <div id="scene"><canvas id="cv" width="1080" height="1350"></canvas></div>
+    <div style="flex:none">
+      <div id="scene"><canvas id="cv" width="1080" height="1350"></canvas></div>
+      <div class="bloc" style="margin-top:14px;width:min(432px,92vw)">
+        <label>Zoom image <span class="hint">(glisse l'image pour recadrer)</span></label>
+        <input type="range" id="edZoom" min="100" max="300" value="100" oninput="setZoom(this.value)">
+        <div class="mini-btns" style="margin-top:10px">
+          <button class="btn sec" onclick="resetImage()">Réinitialiser</button>
+          <label class="btn ghost" style="cursor:pointer">📁 Uploader
+            <input type="file" accept="image/*" style="display:none" onchange="chargerFichier(this)"></label>
+        </div>
+      </div>
+      <div class="bloc" style="width:min(432px,92vw)">
+        <label>🔎 Chercher une autre image (Google Images)</label>
+        <div class="row" style="gap:8px">
+          <div style="flex:3"><input type="text" id="qImg" placeholder="ex : logo BCE façade"
+            onkeydown="if(event.key==='Enter')chercherImages()"></div>
+          <div style="flex:0"><button class="btn" onclick="chercherImages()">Chercher</button></div>
+        </div>
+        <div class="mode mini" style="margin:10px 0 0">
+          <button class="on" onclick="setNbImg(10,this)">10</button>
+          <button onclick="setNbImg(20,this)">20</button>
+          <button onclick="setNbImg(30,this)">30</button>
+        </div>
+        <div id="resImgs"></div>
+        <p class="hint" id="imgHint"></p>
+      </div>
+    </div>
     <div class="panneau">
       <h2>Éditer le post</h2>
       <div class="bloc">
@@ -131,43 +180,57 @@
         <textarea id="edTitre" oninput="rendre()"></textarea>
       </div>
       <div class="bloc">
-        <label>Zoom image <span class="hint">(glisse l'image dans l'aperçu pour la recadrer)</span></label>
-        <input type="range" id="edZoom" min="100" max="300" value="100" oninput="setZoom(this.value)">
+        <label>Description Instagram</label>
+        <textarea id="edCaption" rows="7"></textarea>
+        <div class="mini-btns" style="margin-top:8px">
+          <button class="btn sec" onclick="genererCaption('court')">↻ Courte & concise</button>
+          <button class="btn sec" onclick="genererCaption('complet')">↻ Complète</button>
+          <button class="btn ghost" onclick="copierCaption()">⧉ Copier</button>
+        </div>
       </div>
-      <div class="bloc">
-        <label>Remplacer l'image</label>
-        <input type="file" id="edFichier" accept="image/*" onchange="chargerFichier(this)">
-      </div>
-      <div class="row">
+      <div class="bloc" id="edSources"></div>
+      <div class="bloc mini-btns">
         <button class="btn" onclick="telechargerCanvas()">⬇ Télécharger le PNG</button>
-        <button class="btn sec" onclick="resetImage()">Réinitialiser l'image</button>
+        <button class="btn sec" onclick="envoyerCanvasTelegram()">📤 Envoyer sur Telegram</button>
       </div>
       <p class="hint" id="edSource"></p>
     </div>
   </div>
 </div>
+<div class="toast" id="toast"></div>
 
 <script>
 const REPO='ArnaudSau/flash-actu', API='https://api.github.com/repos/'+REPO;
+const CTA='Abonne toi à @arnaud_saudrais pour suivre ça avec moi';
+const prox=u=>'https://api.allorigins.win/raw?url='+encodeURIComponent(u);
 let TOKEN=localStorage.getItem('invast_pat')||'';
 const H=(raw)=>({'Authorization':'Bearer '+TOKEN,
   'Accept': raw?'application/vnd.github.raw+json':'application/vnd.github+json',
   'X-GitHub-Api-Version':'2022-11-28'});
+function toast(t){const e=document.getElementById('toast');e.textContent=t;e.style.display='block';
+  setTimeout(()=>e.style.display='none',2600);}
 
-/* ---------- token ---------- */
-function sauverToken(){
-  const v=document.getElementById('pat').value.trim();
-  if(!v) return alert('Colle ton token.');
-  TOKEN=v; localStorage.setItem('invast_pat',v); init();
-}
+/* ---------- réglages ---------- */
+function basculerCfg(){const c=document.getElementById('cfg');
+  c.style.display=c.style.display==='block'?'none':'block';
+  document.getElementById('cfgPat').value=TOKEN;
+  document.getElementById('cfgClaude').value=localStorage.getItem('invast_claude')||'';
+  document.getElementById('cfgTgTok').value=localStorage.getItem('invast_tg_tok')||'';
+  document.getElementById('cfgTgChat').value=localStorage.getItem('invast_tg_chat')||'';}
+function sauverCfg(){
+  const p=document.getElementById('cfgPat').value.trim();
+  if(p){TOKEN=p;localStorage.setItem('invast_pat',p);}
+  localStorage.setItem('invast_claude',document.getElementById('cfgClaude').value.trim());
+  localStorage.setItem('invast_tg_tok',document.getElementById('cfgTgTok').value.trim());
+  localStorage.setItem('invast_tg_chat',document.getElementById('cfgTgChat').value.trim());
+  document.getElementById('cfg').style.display='none';toast('Réglages enregistrés');init();}
 async function init(){
-  if(!TOKEN) return;
+  if(!TOKEN){basculerCfg();return}
   const r=await fetch(API,{headers:H()});
-  if(!r.ok){alert('Token refusé ('+r.status+'). Vérifie ses permissions.');localStorage.removeItem('invast_pat');TOKEN='';return}
-  document.getElementById('cfgToken').style.display='none';
+  if(!r.ok){toast('Token GitHub refusé ('+r.status+')');basculerCfg();return}
   document.getElementById('panLancer').style.display='block';
   document.getElementById('panHisto').style.display='block';
-  chargerHistorique(); verifierRunEnCours();
+  chargerHistorique();verifierRunEnCours();
 }
 
 /* ---------- lancement ---------- */
@@ -178,15 +241,15 @@ function setMode(m){MODE=m;
   document.getElementById('zoneSujet').style.display=m==='sujet'?'block':'none';}
 async function lancer(){
   const sujet=MODE==='sujet'?document.getElementById('sujet').value.trim():'';
-  if(MODE==='sujet'&&!sujet) return alert('Écris ton sujet.');
+  if(MODE==='sujet'&&!sujet)return alert('Écris ton sujet.');
   const inputs={sujet,nb_actus:document.getElementById('nb').value,
                 nb_variantes:document.getElementById('nv').value,requete_test:''};
   const r=await fetch(API+'/actions/workflows/cron.yml/dispatches',{method:'POST',
     headers:{...H(),'Content-Type':'application/json'},
     body:JSON.stringify({ref:'main',inputs})});
-  if(r.status!==204) return alert('Échec du lancement ('+r.status+')');
+  if(r.status!==204)return alert('Échec du lancement ('+r.status+')');
   document.getElementById('btnGo').disabled=true;
-  afficherStatut('Génération lancée… (~5 min). Les cartes arrivent aussi sur Telegram.');
+  afficherStatut('Génération lancée… (~5 min)');
   setTimeout(suivreRun,8000);
 }
 function afficherStatut(t){const s=document.getElementById('statut');
@@ -194,7 +257,7 @@ function afficherStatut(t){const s=document.getElementById('statut');
 async function suivreRun(){
   const r=await fetch(API+'/actions/runs?per_page=1',{headers:H()});
   const run=(await r.json()).workflow_runs?.[0];
-  if(!run) return;
+  if(!run)return;
   if(run.status==='completed'){
     afficherStatut(run.conclusion==='success'?'✅ Terminé ! Historique mis à jour.':'❌ Échec — voir GitHub Actions.');
     document.getElementById('btnGo').disabled=false;
@@ -217,39 +280,49 @@ async function chargerHistorique(){
   const zone=document.getElementById('runs');
   zone.innerHTML='<p class="vide">Chargement…</p>';
   const r=await fetch(API+'/contents/archive',{headers:H()});
-  if(r.status===404){zone.innerHTML='<p class="vide">Aucune archive pour l\'instant — lance une génération !</p>';return}
+  if(r.status===404){zone.innerHTML='<p class="vide">Aucune archive — lance une génération !</p>';return}
   const dossiers=(await r.json()).filter(d=>d.type==='dir').sort((a,b)=>b.name.localeCompare(a.name));
-  if(!dossiers.length){zone.innerHTML='<p class="vide">Aucune archive pour l\'instant.</p>';return}
   zone.innerHTML='';
   for(const d of dossiers){
     try{
       const m=await (await fetch(API+'/contents/archive/'+d.name+'/manifest.json',{headers:H(true)})).json();
       zone.appendChild(blocRun(d.name,m));
-    }catch(e){/* run sans manifest (ancien) : ignoré */}
+    }catch(e){}
   }
-  if(!zone.children.length) zone.innerHTML='<p class="vide">Aucune archive exploitable.</p>';
+  if(!zone.children.length)zone.innerHTML='<p class="vide">Aucune archive exploitable.</p>';
 }
 function blocRun(nom,m){
   const div=document.createElement('div');
   const date=nom.replace('run_','').replace('_',' à ').replace(/(\d{4})(\d{2})(\d{2})/,'$3/$2/$1')
                 .replace(/à (\d{2})(\d{2})/,'à $1h$2');
-  const mode=m.mode==='sujet'?'<span class="badge or">Sujet : '+echap(m.sujet_demande.slice(0,60))+'</span>':'<span class="badge">Auto</span>';
+  const mode=m.mode==='sujet'?'<span class="badge or">Sujet : '+echap((m.sujet_demande||'').slice(0,60))+'</span>':'<span class="badge">Auto</span>';
   div.innerHTML='<div class="run-titre"><b>'+date+'</b> '+mode+'</div>';
-  const grid=document.createElement('div');grid.className='grid';
-  m.actus.forEach((a,ia)=>a.variantes.forEach((v,iv)=>{
-    const p=document.createElement('div');p.className='post';
-    const img=document.createElement('img');img.alt=v.titre;img.loading='lazy';
-    chargerImage('archive/'+nom+'/'+v.carte,img);
-    const acts=document.createElement('div');acts.className='acts';
-    const bT=document.createElement('button');bT.className='btn ghost';bT.textContent='⬇';
-    bT.title='Télécharger';bT.onclick=()=>telechargerFichier('archive/'+nom+'/'+v.carte,v.carte);
-    const bE=document.createElement('button');bE.className='btn sec';bE.textContent='Éditer';
-    bE.onclick=()=>ouvrirEditeur(nom,v);
-    acts.append(bT,bE);p.append(img,acts);grid.appendChild(p);
-  }));
-  div.appendChild(grid);return div;
+  m.actus.forEach(a=>{
+    const src=(a.sources||[]).filter(u=>u).slice(0,2)
+      .map(u=>'<a href="'+u+'" target="_blank" rel="noopener">🔗 '+dom(u)+'</a>').join(' ');
+    const head=document.createElement('div');head.className='actu-src';
+    head.innerHTML='<b style="color:var(--blanc)">'+echap((a.sujet||'').slice(0,90))+'</b><br>'+(src||'<i>pas de source</i>');
+    div.appendChild(head);
+    const grid=document.createElement('div');grid.className='grid';grid.style.marginBottom='14px';
+    a.variantes.forEach(v=>{
+      const p=document.createElement('div');p.className='post';
+      const img=document.createElement('img');img.alt=v.titre;img.loading='lazy';
+      chargerImage('archive/'+nom+'/'+v.carte,img);
+      const acts=document.createElement('div');acts.className='acts';
+      const bT=document.createElement('button');bT.className='btn ghost';bT.textContent='⬇';
+      bT.title='Télécharger';bT.onclick=()=>telechargerFichier('archive/'+nom+'/'+v.carte,v.carte);
+      const bTg=document.createElement('button');bTg.className='btn ghost';bTg.textContent='📤';
+      bTg.title='Envoyer sur Telegram';bTg.onclick=()=>envoyerArchiveTelegram(nom,v);
+      const bE=document.createElement('button');bE.className='btn sec';bE.textContent='Éditer';
+      bE.onclick=()=>ouvrirEditeur(nom,a,v);
+      acts.append(bT,bTg,bE);p.append(img,acts);grid.appendChild(p);
+    });
+    div.appendChild(grid);
+  });
+  return div;
 }
-const echap=s=>s.replace(/</g,'&lt;');
+const echap=s=>(s||'').replace(/</g,'&lt;');
+const dom=u=>{try{return new URL(u).hostname.replace('www.','')}catch(e){return u.slice(0,30)}};
 async function chargerImage(chemin,imgEl){
   try{const r=await fetch(API+'/contents/'+chemin,{headers:H(true)});
     imgEl.src=URL.createObjectURL(await r.blob());}catch(e){}
@@ -260,37 +333,64 @@ async function telechargerFichier(chemin,nom){
   a.download=nom;a.click();
 }
 
-/* ---------- éditeur (re-rendu fidèle au template) ---------- */
+/* ---------- Telegram (envoi manuel) ---------- */
+function tgCfg(){const t=localStorage.getItem('invast_tg_tok'),c=localStorage.getItem('invast_tg_chat');
+  if(!t||!c){toast('Renseigne bot Telegram + chat id dans ⚙ Réglages');return null}return {t,c};}
+async function envoyerTelegram(blob,caption){
+  const cfg=tgCfg();if(!cfg)return;
+  const fd=new FormData();fd.append('chat_id',cfg.c);fd.append('photo',blob,'carte.png');
+  fd.append('caption',(caption||'').slice(0,1024));
+  try{const r=await fetch('https://api.telegram.org/bot'+cfg.t+'/sendPhoto',{method:'POST',body:fd});
+    toast(r.ok?'📤 Envoyé sur Telegram !':'Échec de l\'envoi ('+r.status+')');
+  }catch(e){toast('Échec de l\'envoi');}
+}
+async function envoyerArchiveTelegram(run,v){
+  const r=await fetch(API+'/contents/archive/'+run+'/'+v.carte,{headers:H(true)});
+  envoyerTelegram(await r.blob(),assurerCTA(v.caption||v.titre));
+}
+function envoyerCanvasTelegram(){
+  cv.toBlob(b=>envoyerTelegram(b,document.getElementById('edCaption').value),'image/png');
+}
+
+/* ---------- éditeur ---------- */
 const T={W:1080,H:1350,
   handle:{txt:'arnaud_saudrais',size:28,x:57,y:62,ph:28,pv:9},
   sticker:{txt:'Flash Actu',size:34,ph:18,pv:12,r:10,bg:'#CB3126'},
   titre:{max:66,min:46,lh:1.27,mg:75,md:60,mb:90,lmax:5,gap:38},
   degrade:{debut:.30,plein:.78}};
-let ED={img:null,imgURL:'',zoom:1,ox:0,oy:0,base:1,drag:null};
+let ED={img:null,zoom:1,ox:0,oy:0,base:1,drag:null,actu:null,varte:null};
 const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
 
-async function ouvrirEditeur(run,v){
+async function ouvrirEditeur(run,actu,v){
   document.getElementById('editeur').style.display='block';
   document.getElementById('edTitre').value=v.titre;
-  document.getElementById('edSource').textContent='Image source : '+(v.source_image||'—');
+  document.getElementById('edCaption').value=assurerCTA(v.caption||'');
+  document.getElementById('edSource').textContent='Image d\'origine : '+(v.source_image||'—');
   document.getElementById('edZoom').value=100;
-  ED={img:null,imgURL:'archive/'+run+'/'+v.fond,zoom:1,ox:0,oy:0,base:1,drag:null};
+  document.getElementById('resImgs').innerHTML='';document.getElementById('imgHint').textContent='';
+  document.getElementById('qImg').value='';
+  const srcs=(actu.sources||[]).filter(u=>u).slice(0,2)
+    .map(u=>'<a href="'+u+'" target="_blank" rel="noopener">🔗 '+dom(u)+'</a>').join('<br>');
+  document.getElementById('edSources').innerHTML=srcs?'<label>Sources de l\'actu (fact-check)</label>'+srcs:'';
+  ED={img:null,zoom:1,ox:0,oy:0,base:1,drag:null,actu,varte:v};
   try{
-    const r=await fetch(API+'/contents/'+ED.imgURL,{headers:H(true)});
+    const r=await fetch(API+'/contents/archive/'+run+'/'+v.fond,{headers:H(true)});
     await chargerBlob(await r.blob());
   }catch(e){rendre()}
 }
+function assurerCTA(c){c=(c||'').trim();
+  return c.endsWith(CTA)?c:(c?c+'\n\n':'')+CTA;}
 function chargerBlob(blob){return new Promise(res=>{
   const i=new Image();i.onload=()=>{ED.img=i;
-    ED.base=Math.max(T.W/i.width,T.H/i.height);ED.zoom=1;ED.ox=0;ED.oy=0;rendre();res()};
+    ED.base=Math.max(T.W/i.width,T.H/i.height);ED.zoom=1;ED.ox=0;ED.oy=0;
+    document.getElementById('edZoom').value=100;rendre();res()};
   i.src=URL.createObjectURL(blob);});}
-function chargerFichier(inp){if(inp.files[0]) chargerBlob(inp.files[0]);}
-function resetImage(){document.getElementById('edZoom').value=100;
-  if(ED.img){ED.zoom=1;ED.ox=0;ED.oy=0;rendre();}}
+function chargerFichier(inp){if(inp.files[0])chargerBlob(inp.files[0]);}
+function resetImage(){if(ED.img){ED.zoom=1;ED.ox=0;ED.oy=0;
+  document.getElementById('edZoom').value=100;rendre();}}
 function setZoom(v){ED.zoom=v/100;rendre();}
 function fermerEditeur(){document.getElementById('editeur').style.display='none';}
 
-/* drag pour recadrer */
 const scene=document.getElementById('scene');
 scene.addEventListener('pointerdown',e=>{ED.drag={x:e.clientX,y:e.clientY,ox:ED.ox,oy:ED.oy};scene.setPointerCapture(e.pointerId)});
 scene.addEventListener('pointermove',e=>{if(!ED.drag)return;
@@ -306,30 +406,25 @@ function rendre(){
     x=Math.min(0,Math.max(T.W-w,x));y=Math.min(0,Math.max(T.H-h,y));
     ctx.drawImage(ED.img,x,y,w,h);
   }
-  // dégradé
   const g=ctx.createLinearGradient(0,0,0,T.H);
   g.addColorStop(0,'rgba(0,0,0,0)');g.addColorStop(T.degrade.debut,'rgba(0,0,0,0)');
   g.addColorStop(T.degrade.plein,'rgba(0,0,0,1)');g.addColorStop(1,'rgba(0,0,0,1)');
   ctx.fillStyle=g;ctx.fillRect(0,0,T.W,T.H);
-  // pastille handle
   const hd=T.handle;ctx.font='800 '+hd.size+'px Poppins';
   const tw=ctx.measureText(hd.txt).width,pw=tw+2*hd.ph,ph=hd.size+2*hd.pv;
   rr(hd.x,hd.y,pw,ph,ph/2);ctx.fillStyle='#fff';ctx.fill();
   ctx.fillStyle='#000';ctx.textBaseline='middle';
   ctx.fillText(hd.txt,hd.x+hd.ph,hd.y+ph/2+2);
-  // titre auto-fit
   const ti=T.titre,texte=document.getElementById('edTitre').value.trim();
   const largMax=T.W-ti.mg-ti.md;let size=ti.max,lignes;
   for(;;){ctx.font='700 '+size+'px Poppins';lignes=couper(texte,largMax);
     if(lignes.length<=ti.lmax||size<=ti.min)break;size-=2;}
   const lh=Math.round(size*ti.lh),blocH=lh*lignes.length,yT=T.H-ti.mb-blocH;
-  // sticker
   const st=T.sticker;ctx.font='800 '+st.size+'px Poppins';
   const stw=ctx.measureText(st.txt).width,sw=stw+2*st.ph,sh=st.size+2*st.pv;
   const yS=yT-ti.gap-sh;
   rr(ti.mg,yS,sw,sh,st.r);ctx.fillStyle=st.bg;ctx.fill();
   ctx.fillStyle='#fff';ctx.fillText(st.txt,ti.mg+st.ph,yS+sh/2+2);
-  // lignes du titre
   ctx.font='700 '+size+'px Poppins';ctx.fillStyle='#fff';
   lignes.forEach((l,i)=>ctx.fillText(l,ti.mg,yT+i*lh+lh/2+2));
 }
@@ -345,8 +440,99 @@ function telechargerCanvas(){
     a.href=URL.createObjectURL(b);a.download='flash-actu-'+Date.now()+'.png';a.click();},'image/png');
 }
 
+/* ---------- recherche Google Images ---------- */
+let NBIMG=10,RESULTATS=[];
+function setNbImg(n,btn){NBIMG=n;
+  btn.parentElement.querySelectorAll('button').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');afficherResultats();}
+async function chercherImages(){
+  const q=document.getElementById('qImg').value.trim();if(!q)return;
+  document.getElementById('imgHint').textContent='Recherche en cours…';
+  RESULTATS=[];
+  try{RESULTATS=await googleImages(q);}catch(e){}
+  if(!RESULTATS.length){try{RESULTATS=await bingImages(q);}catch(e){}}
+  document.getElementById('imgHint').textContent=RESULTATS.length
+    ?RESULTATS.length+' images trouvées — clique pour l\'utiliser'
+    :'Rien trouvé (le proxy a peut-être été bloqué, réessaie).';
+  afficherResultats();
+}
+async function googleImages(q){
+  const html=await (await fetch(prox('https://www.google.com/search?q='+encodeURIComponent(q)+'&tbm=isch&hl=fr&gl=fr'))).text();
+  const re=/\["(https?:\/\/[^"]{10,400}?\.(?:jpe?g|png|webp))",\s*\d+,\s*\d+\]/g;
+  let m,thumb=null;const out=[];
+  while((m=re.exec(html))&&out.length<30){
+    const u=m[1];
+    if(u.includes('gstatic.com')){thumb=u;continue}
+    if(u.includes('google.'))continue;
+    out.push({thumb:thumb||u,url:u});thumb=null;
+  }
+  return out;
+}
+async function bingImages(q){
+  const html=await (await fetch(prox('https://www.bing.com/images/search?q='+encodeURIComponent(q)))).text();
+  const re=/m="([^"]+)"/g;let m;const out=[];
+  while((m=re.exec(html))&&out.length<30){
+    try{const d=JSON.parse(m[1].replace(/&quot;/g,'"').replace(/&amp;/g,'&'));
+      if(d.murl)out.push({thumb:d.turl||d.murl,url:d.murl});}catch(e){}
+  }
+  return out;
+}
+function afficherResultats(){
+  const zone=document.getElementById('resImgs');zone.innerHTML='';
+  RESULTATS.slice(0,NBIMG).forEach(r=>{
+    const i=document.createElement('img');i.src=r.thumb;i.title=dom(r.url);
+    i.onclick=()=>utiliserImage(r.url);
+    i.onerror=()=>i.remove();
+    zone.appendChild(i);
+  });
+}
+async function utiliserImage(url){
+  document.getElementById('imgHint').textContent='Chargement de l\'image…';
+  try{
+    let r=await fetch(prox(url));
+    if(!r.ok)throw 0;
+    await chargerBlob(await r.blob());
+    document.getElementById('imgHint').textContent='Image remplacée ✔ ('+dom(url)+')';
+    document.getElementById('edSource').textContent='Image d\'origine : '+url;
+  }catch(e){document.getElementById('imgHint').textContent='Image bloquée, essaie-en une autre.';}
+}
+
+/* ---------- régénération de description (API Claude) ---------- */
+async function genererCaption(mode){
+  const cle=localStorage.getItem('invast_claude');
+  if(!cle){toast('Ajoute ta clé Anthropic dans ⚙ Réglages');return}
+  const titre=document.getElementById('edTitre').value.trim();
+  const sujet=ED.actu?.sujet||titre;
+  const srcs=(ED.actu?.sources||[]).slice(0,2).join(' , ');
+  const consigne=mode==='court'
+    ?'COURTE ET CONCISE : environ 3 lignes de texte maximum (hors hashtags et ligne finale).'
+    :'COMPLÈTE : davantage d\'explication et de contexte, mais phrases courtes, aérées, zéro jargon, retours à la ligne fréquents.';
+  const prompt='Écris une description Instagram en français pour ce post finance grand public.\n'
+    +'Sujet : '+sujet+'\nTitre de la carte : '+titre+(srcs?'\nSources : '+srcs:'')+'\n\n'
+    +'Style : direct, punchy, vulgarisé, crédible (aucun chiffre inventé). '+consigne+'\n'
+    +'INTERDIT : tiret cadratin, double tiret, underscores.\n'
+    +'Structure : accroche, contexte, puis une ligne de 5 à 8 hashtags FR pertinents, '
+    +'puis DERNIÈRE LIGNE EXACTEMENT : « '+CTA+' »\n'
+    +'Réponds UNIQUEMENT avec la description, rien d\'autre.';
+  document.getElementById('edCaption').value='Génération en cours…';
+  try{
+    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',
+      headers:{'x-api-key':cle,'anthropic-version':'2023-06-01',
+               'anthropic-dangerous-direct-browser-access':'true','content-type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:700,
+        messages:[{role:'user',content:prompt}]})});
+    const j=await r.json();
+    const txt=(j.content?.[0]?.text||'').trim();
+    document.getElementById('edCaption').value=assurerCTA(txt)||'(échec, réessaie)';
+  }catch(e){document.getElementById('edCaption').value='';toast('Échec de la génération');}
+}
+function copierCaption(){
+  navigator.clipboard.writeText(document.getElementById('edCaption').value);
+  toast('Description copiée ⧉');
+}
+
 /* ---------- démarrage ---------- */
-document.fonts.ready.then(()=>{if(TOKEN)init();});
+document.fonts.ready.then(()=>init());
 </script>
 </body>
 </html>
