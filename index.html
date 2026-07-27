@@ -142,6 +142,20 @@
   .zoom-l span{font-size:12px;color:var(--gris);white-space:nowrap;min-width:44px;text-align:right}
   input[type=range]{flex:1;accent-color:var(--or);height:28px}
   .hint{font-size:11.5px;color:var(--gris2);line-height:1.5}
+  /* --- actus du jour --- */
+  .actuf{padding:13px 0;border-top:1px solid var(--bord)}
+  .actuf:first-child{border-top:none;padding-top:2px}
+  .actuf-t{display:block;font-size:14px;font-weight:600;line-height:1.35;color:var(--blanc);
+    text-decoration:none;margin-bottom:6px}
+  .actuf-t:active{color:var(--or)}
+  .actuf-m{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:9px}
+  .actuf-m span{font-size:11.5px;color:var(--gris2)}
+  .actuf-m .pastille{color:var(--bleu);background:rgba(143,198,242,.09);
+    border-radius:20px;padding:3px 10px}
+  .maj{margin-left:auto;display:flex;align-items:center;gap:12px;text-transform:none;
+    letter-spacing:0;font-weight:500;color:var(--gris2)}
+  .maj b{font-weight:500}
+  .maj .rech{cursor:pointer;color:var(--or)}
   /* --- propositions d'accroches --- */
   .alts{display:flex;flex-direction:column;gap:7px;margin-top:11px}
   .alt{text-align:left;background:var(--noir);border:1px solid var(--bord);border-radius:11px;
@@ -188,6 +202,15 @@
       <div><label>Chat ID</label><input type="text" id="cfgTgChat" placeholder="123456789"></div>
     </div>
     <button class="btn" onclick="sauverCfg()">Enregistrer</button>
+  </div>
+
+  <!-- ACTUS DU JOUR -->
+  <div class="card" id="panActus" style="display:none">
+    <div class="titre">Actus du jour
+      <span class="maj"><b id="actusMaj"></b>
+        <span class="rech" onclick="chargerActus(true)">↻ Actualiser</span></span>
+    </div>
+    <div id="listeActus"><p class="vide">Chargement…</p></div>
   </div>
 
   <!-- LANCER -->
@@ -331,8 +354,114 @@ async function init(){
   if(!TOKEN){basculerCfg();return}
   const r=await fetch(API,{headers:H()});
   if(!r.ok){toast('Token GitHub refusé');basculerCfg();return}
-  panLancer.style.display='block';panHisto.style.display='block';
-  chargerHistorique();verifierRunEnCours();
+  panActus.style.display='block';panLancer.style.display='block';panHisto.style.display='block';
+  chargerHistorique();verifierRunEnCours();chargerActus(false);
+}
+
+/* ---------- actus du jour (100 % gratuit : flux RSS via le proxy, zéro appel Claude) ---------- */
+const CACHE_ACTUS='invast_actus', FRAICHEUR=6*3600*1000;   // rafraîchi tout seul toutes les 6 h
+const RSS_SECOURS=[
+  {nom:'BFM Business',url:'https://www.bfmtv.com/rss/economie/'},
+  {nom:'La Tribune',url:'https://www.latribune.fr/rss/rubriques/economie.rss'},
+  {nom:'Capital',url:'https://www.capital.fr/rss'},
+  {nom:'Les Échos',url:'https://services.lesechos.fr/rss/les-echos-finance-marches.xml'},
+  {nom:'Boursorama',url:'https://www.boursorama.com/rss/actualites.xml'}];
+/* mêmes critères que la curation du robot, en version locale et gratuite */
+const MOTS=['bourse','action','crypto','bitcoin','ethereum','taux','bce','fed','inflation',
+  'livret a','pea','assurance-vie','épargne','epargne','ipo','introduction en bourse','résultats',
+  "chiffre d'affaires",'bénéfice','dividende','fusion','rachat','licenciement','pétrole',
+  'immobilier','impôt','retraite','salaire',"pouvoir d'achat",'nasdaq','cac 40','wall street',
+  'milliard','million','valorisation','levée de fonds'];
+const BOITES=['apple','nvidia','tesla','spacex','meta','amazon','google','microsoft','openai',
+  'anthropic','lvmh','totalenergies','bnp','société générale','carrefour','renault','stellantis',
+  'airbus','orange','edf','netflix','samsung','binance','coinbase','hermès','l\'oréal'];
+const HORS=['football','ligue 1','rugby','tennis','météo','horoscope','people','cinéma','série tv'];
+
+async function fluxRss(){
+  try{
+    const y=await (await fetch(API+'/contents/config.yaml',{headers:H(true)})).text();
+    const l=[...y.split('rss:')[1].matchAll(/nom:\s*"([^"]+)"\s*\n\s*url:\s*"([^"]+)"/g)]
+      .map(m=>({nom:m[1],url:m[2]}));
+    if(l.length)return l;
+  }catch(e){}
+  return RSS_SECOURS;
+}
+function parserFlux(xml,nom){
+  const d=new DOMParser().parseFromString(xml,'text/xml');
+  return [...d.querySelectorAll('item, entry')].map(it=>{
+    const lien=it.querySelector('link');
+    const dt=it.querySelector('pubDate, published, updated')?.textContent||'';
+    return {titre:(it.querySelector('title')?.textContent||'').trim(),
+      url:((lien?.getAttribute('href')||lien?.textContent||'')).trim(),
+      date:dt?new Date(dt).getTime()||0:0,
+      resume:(it.querySelector('description, summary')?.textContent||'')
+             .replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim().slice(0,300),
+      source:nom};
+  }).filter(a=>a.titre&&/^https?:/.test(a.url));
+}
+function scoreActu(a){
+  const t=(a.titre+' '+a.resume).toLowerCase();
+  if(HORS.some(m=>t.includes(m)))return -1;
+  let s=0;
+  if(a.date){const h=(Date.now()-a.date)/3600000;
+    s+= h<6?3 : h<12?2 : h<24?1 : h<48?0 : -3;}
+  if(/\d+([.,]\d+)?\s*(%|milliards?|millions?|€|\$|md)/i.test(t))s+=2;
+  s+=Math.min(4,MOTS.filter(m=>t.includes(m)).length*2);
+  if(BOITES.some(m=>t.includes(m)))s+=2;
+  return s;
+}
+const cleTitre=t=>t.toLowerCase().replace(/[^a-zà-ÿ0-9 ]/g,'').split(/\s+/)
+  .filter(m=>m.length>3).slice(0,5).join(' ');
+let ACTUS=[];
+async function chargerActus(force){
+  const zone=document.getElementById('listeActus');
+  const cache=JSON.parse(localStorage.getItem(CACHE_ACTUS)||'null');
+  if(cache&&!force&&Date.now()-cache.t<FRAICHEUR)return afficherActus(cache.liste,cache.t);
+  if(!proxyBase()){zone.innerHTML='<p class="vide">Configure l\'URL du proxy dans ⚙</p>';return}
+  zone.innerHTML='<p class="vide">Recherche des actus…</p>';
+  const flux=await fluxRss();let tout=[];
+  await Promise.all(flux.map(async f=>{
+    try{tout=tout.concat(parserFlux(await viaProxyTexte(f.url),f.nom));}catch(e){}
+  }));
+  const vus=new Set();
+  const liste=tout
+    .filter(a=>{const c=cleTitre(a.titre);if(!c||vus.has(c))return false;vus.add(c);return true})
+    .map(a=>({...a,score:scoreActu(a)})).filter(a=>a.score>0)
+    .sort((x,y)=>y.score-x.score||y.date-x.date).slice(0,5);
+  if(!liste.length){zone.innerHTML='<p class="vide">Rien de marquant pour l\'instant</p>';return}
+  localStorage.setItem(CACHE_ACTUS,JSON.stringify({t:Date.now(),liste}));
+  afficherActus(liste,Date.now());
+}
+function ilYA(ms){
+  if(!ms)return '';
+  const h=Math.round((Date.now()-ms)/3600000);
+  return h<1?'à l\'instant':h<24?'il y a '+h+' h':'il y a '+Math.round(h/24)+' j';
+}
+function afficherActus(liste,t){
+  ACTUS=liste;
+  document.getElementById('actusMaj').textContent='maj '+ilYA(t);
+  const z=document.getElementById('listeActus');z.innerHTML='';
+  liste.forEach((a,i)=>{
+    const d=document.createElement('div');d.className='actuf';
+    d.innerHTML='<a class="actuf-t" href="'+a.url+'" target="_blank" rel="noopener">'
+      +echap(a.titre)+'</a>'
+      +'<div class="actuf-m"><span class="pastille">'+echap(a.source||dom(a.url))+'</span>'
+      +'<span>'+ilYA(a.date)+'</span></div>';
+    const b=document.createElement('button');
+    b.className='btn sec mini';b.textContent='✨ Créer un visuel';
+    b.onclick=()=>creerDepuisActu(i);
+    d.appendChild(b);z.appendChild(d);
+  });
+}
+/* Prépare le sujet et remonte au bloc Générer : le lancement (qui consomme
+   des crédits) reste un geste volontaire, un clic sur « Lancer ». */
+function creerDepuisActu(i){
+  const a=ACTUS[i];if(!a)return;
+  setMode('sujet');
+  document.getElementById('sujet').value=
+    a.titre+(a.resume?'\n\n'+a.resume:'')+'\n\nSource : '+a.url;
+  panLancer.scrollIntoView({behavior:'smooth',block:'center'});
+  toast('Sujet chargé, appuie sur Lancer');
 }
 
 /* ---------- lancement ---------- */
