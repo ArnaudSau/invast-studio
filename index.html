@@ -325,30 +325,57 @@ let MODE='auto';
 function setMode(m){MODE=m;
   mAuto.classList.toggle('on',m==='auto');mSujet.classList.toggle('on',m==='sujet');
   zoneSujet.style.display=m==='sujet'?'block':'none';}
+let RUN_ID=null;
+async function dernierRunId(){
+  const r=await fetch(API+'/actions/runs?per_page=1&_='+Date.now(),{headers:H()});
+  return (await r.json()).workflow_runs?.[0]?.id||0;
+}
 async function lancer(){
   const sujet=MODE==='sujet'?document.getElementById('sujet').value.trim():'';
   if(MODE==='sujet'&&!sujet)return toast('Écris ton sujet');
+  const avant=await dernierRunId();          // on mémorise le run précédent
   const inputs={sujet,nb_actus:nb.value,nb_variantes:nv.value,requete_test:''};
   const r=await fetch(API+'/actions/workflows/cron.yml/dispatches',{method:'POST',
     headers:{...H(),'Content-Type':'application/json'},
     body:JSON.stringify({ref:'main',inputs})});
   if(r.status!==204)return toast('Échec du lancement');
-  btnGo.disabled=true;statutMsg('Génération lancée… (~5 min)');setTimeout(suivreRun,8000);
+  RUN_ID=null;btnGo.disabled=true;statutMsg('Démarrage…');
+  setTimeout(()=>attendreNouveauRun(avant,0),6000);
+}
+/* On attend qu'un run VRAIMENT NOUVEAU apparaisse : sinon on lisait le run
+   précédent, déjà terminé, et l'app affichait « ✅ Terminé » instantanément. */
+async function attendreNouveauRun(avant,essais){
+  const id=await dernierRunId();
+  if(id&&id!==avant){RUN_ID=id;return suivreRun();}
+  if(essais>20){statutMsg('❌ Le run n\'a pas démarré');btnGo.disabled=false;return}
+  statutMsg('Démarrage…');setTimeout(()=>attendreNouveauRun(avant,essais+1),6000);
 }
 function statutMsg(t){statut.style.display='flex';statutTxt.textContent=t;}
+function finRun(msg){statutMsg(msg);btnGo.disabled=false;
+  document.querySelector('#statut .dot').style.display='none';}
 async function suivreRun(){
-  const r=await fetch(API+'/actions/runs?per_page=1',{headers:H()});
-  const run=(await r.json()).workflow_runs?.[0];if(!run)return;
-  if(run.status==='completed'){
-    statutMsg(run.conclusion==='success'?'✅ Terminé':'❌ Échec (voir GitHub)');
-    btnGo.disabled=false;document.querySelector('#statut .dot').style.display='none';
-    setTimeout(chargerHistorique,4000);
-  }else{statutMsg('En cours…');document.querySelector('#statut .dot').style.display='block';
-    setTimeout(suivreRun,10000);}
+  if(!RUN_ID)return;
+  const run=await (await fetch(API+'/actions/runs/'+RUN_ID+'?_='+Date.now(),{headers:H()})).json();
+  if(run.status!=='completed'){
+    statutMsg('En cours…');document.querySelector('#statut .dot').style.display='block';
+    return setTimeout(suivreRun,10000);
+  }
+  if(run.conclusion!=='success')return finRun('❌ Échec (voir GitHub)');
+  // succès : on vérifie qu'une archive est réellement arrivée
+  finRun('✅ Terminé, chargement…');
+  const avant=runsConnus();
+  for(let i=0;i<6;i++){
+    await new Promise(r=>setTimeout(r,5000));
+    await chargerHistorique();
+    if(runsConnus()!==avant)return statutMsg('✅ Terminé');
+  }
+  statutMsg('⚠️ Terminé, mais aucun post produit (voir les logs GitHub)');
 }
+function runsConnus(){return runs.querySelectorAll('.run').length+'/'+runs.querySelectorAll('.post').length}
 async function verifierRunEnCours(){
   const r=await fetch(API+'/actions/runs?status=in_progress&per_page=1',{headers:H()});
-  if((await r.json()).total_count>0){btnGo.disabled=true;statutMsg('Un run est en cours…');suivreRun();}
+  const run=(await r.json()).workflow_runs?.[0];
+  if(run){RUN_ID=run.id;btnGo.disabled=true;statutMsg('Un run est en cours…');suivreRun();}
 }
 
 /* ---------- historique ---------- */
