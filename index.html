@@ -473,9 +473,12 @@ async function chercherImages(){
   if(!proxyBase()){document.getElementById('imgHint').textContent='⚠️ Configure l\'URL de ton proxy Cloudflare dans ⚙ Réglages (voir ui/worker.js).';}
   else document.getElementById('imgHint').textContent='Recherche en cours…';
   RESULTATS=[];
-  try{RESULTATS=await braveImages(q);}catch(e){}
-  if(!RESULTATS.length){try{RESULTATS=await googleImages(q);}catch(e){}}
-  if(!RESULTATS.length){try{RESULTATS=await bingImages(q);}catch(e){}}
+  // Bing en premier : fiable via le proxy. Google bloque souvent les IP
+  // Cloudflare (429) -> il sert de complément, Brave si une clé est fournie.
+  try{RESULTATS=await bingImages(q);}catch(e){}
+  if(RESULTATS.length<10){try{const b=await braveImages(q);RESULTATS=RESULTATS.concat(b);}catch(e){}}
+  if(RESULTATS.length<10){try{const g=await googleImages(q);RESULTATS=RESULTATS.concat(g);}catch(e){}}
+  const vus=new Set();RESULTATS=RESULTATS.filter(r=>!vus.has(r.url)&&vus.add(r.url));
   document.getElementById('imgHint').textContent=RESULTATS.length
     ?RESULTATS.length+' images trouvées — clique pour l\'utiliser'
     :'Rien trouvé. Vérifie le proxy dans ⚙ Réglages, ou réessaie.';
