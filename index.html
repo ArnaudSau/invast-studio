@@ -420,8 +420,19 @@ function scoreActu(a){
   if(BOITES.some(m=>t.includes(m)))s+=2;
   return s;
 }
-const cleTitre=t=>t.toLowerCase().replace(/[^a-zà-ÿ0-9 ]/g,'').split(/\s+/)
-  .filter(m=>m.length>3).slice(0,5).join(' ');
+/* Déduplication par similarité (Jaccard sur les mots significatifs), comme la
+   mémoire du robot : « LVMH dépasse les attentes » et « On refait la séance :
+   LVMH dépasse les attentes au premier semestre » sont la même actu. */
+const VIDES=new Set(['dans','pour','avec','plus','cette','leur','their','sont','être','fait',
+  'après','contre','mais','tout','tous','sans','sous','entre','depuis','encore','déjà','vers']);
+const motsCles=t=>new Set(t.toLowerCase().replace(/[^a-zà-ÿ0-9 ]/g,' ').split(/\s+/)
+  .filter(m=>m.length>3&&!VIDES.has(m)));
+function similaires(a,b){
+  const A=motsCles(a),B=motsCles(b);
+  if(!A.size||!B.size)return false;
+  let inter=0;A.forEach(m=>{if(B.has(m))inter++});
+  return inter/Math.min(A.size,B.size)>=.6;      // sous-ensemble = doublon
+}
 let ACTUS=[];
 async function chargerActus(force){
   const zone=document.getElementById('listeActus');
@@ -437,11 +448,17 @@ async function chargerActus(force){
     try{return parserFlux(await viaProxyTexte(f.url),f.nom);}catch(e){return []}
   }));
   const tout=lots.flat();
-  const vus=new Set();
-  const liste=tout
-    .filter(a=>{const c=cleTitre(a.titre);if(!c||vus.has(c))return false;vus.add(c);return true})
-    .map(a=>({...a,score:scoreActu(a)})).filter(a=>a.score>0)
-    .sort((x,y)=>y.score-x.score||y.date-x.date).slice(0,5);
+  const classe=tout.map(a=>({...a,score:scoreActu(a)})).filter(a=>a.score>0)
+    .sort((x,y)=>y.score-x.score||y.date-x.date);
+  // on garde les meilleures, sans doublon et sans qu'une seule source monopolise
+  const liste=[],parSource={};
+  for(const a of classe){
+    if(liste.length>=5)break;
+    if(liste.some(v=>similaires(v.titre,a.titre)))continue;
+    const s=a.source||dom(a.url);
+    if((parSource[s]||0)>=2)continue;
+    parSource[s]=(parSource[s]||0)+1;liste.push(a);
+  }
   if(!liste.length){zone.innerHTML='<p class="vide">Rien de marquant pour l\'instant</p>';return}
   localStorage.setItem(CACHE_ACTUS,JSON.stringify({t:Date.now(),liste}));
   afficherActus(liste,Date.now());
