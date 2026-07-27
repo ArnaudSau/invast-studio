@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0B0B0D">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Invast Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --noir:#0A0A0C; --carte:#141418; --carte2:#1B1B20; --bord:#26262C;
+    --blanc:#F7F7F4; --gris:#8E8E96; --gris2:#5E5E66;
+    --or:#D9A441; --or2:#F2CE86; --bleu:#8FC6F2; --rouge:#E63A2B;
+    --voile:rgba(10,10,12,.94); --ombre:rgba(0,0,0,.5);
+    --r:16px; --safe:env(safe-area-inset-bottom,0px); --safeT:env(safe-area-inset-top,0px);
+  }
+  /* --- thème clair --- */
+  body.clair{
+    --noir:#F6F5F1; --carte:#FFFFFF; --carte2:#F0EEE8; --bord:#E2DFD6;
+    --blanc:#17171A; --gris:#6C6C74; --gris2:#9B9BA2;
+    --or:#C08A22; --or2:#A97615; --bleu:#2C7FC4;
+    --voile:rgba(246,245,241,.94); --ombre:rgba(0,0,0,.14);
+  }
+  body.clair select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236C6C74' stroke-width='2' fill='none'/%3E%3C/svg%3E")}
+  /* boutons pleins (fond doré) : texte blanc ; secondaires : texte foncé */
+  body.clair .btn{color:#FFF}
+  body.clair .btn.sec{color:var(--blanc);background:#FFF;border-color:var(--bord)}
+  body.clair .btn.sec:active{background:var(--carte2)}
+  body.clair label.btn.sec{color:var(--blanc)}
+  body.clair .seg button.on{color:#FFF}
+  body.clair .seg button{color:var(--gris)}
+  body.clair .toast{color:#FFF}
+  body.clair .ico{color:var(--gris);background:#FFF}
+  body.clair .post .bar button{color:var(--gris)}
+  body.clair .post .bar button.pri{color:var(--or)}
+  body.clair .post img,body.clair #resImgs img{background:#EDEBE4}
+  body.clair #scene{background:#111}
+  body.clair input,body.clair textarea,body.clair select{background:#FFF;color:var(--blanc)}
+  body.clair input::placeholder,body.clair textarea::placeholder{color:var(--gris2)}
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html{-webkit-text-size-adjust:100%}
+  body{background:var(--noir);color:var(--blanc);font-family:'Poppins',system-ui,sans-serif;
+    min-height:100dvh;font-size:15px;line-height:1.45}
+  .wrap{max-width:1120px;margin:0 auto;
+    padding:calc(18px + var(--safeT)) 16px calc(96px + var(--safe))}
+  @media(min-width:800px){.wrap{padding:calc(30px + var(--safeT)) 24px 60px}}
+
+  /* --- entête --- */
+  .top{display:flex;align-items:center;gap:12px;margin-bottom:20px}
+  .logo{font-size:19px;font-weight:800;letter-spacing:.4px;flex:1}
+  .logo span{color:var(--or)}
+  .ico{width:40px;height:40px;border-radius:12px;border:1px solid var(--bord);background:var(--carte);
+    color:var(--gris);display:grid;place-items:center;font-size:17px;cursor:pointer;flex:none}
+  .ico:active{background:var(--carte2)}
+
+  /* --- blocs --- */
+  .card{background:var(--carte);border:1px solid var(--bord);border-radius:var(--r);
+    padding:18px;margin-bottom:16px}
+  @media(min-width:800px){.card{padding:24px}}
+  .titre{font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:1.8px;
+    color:var(--or);margin-bottom:14px;display:flex;align-items:center;gap:10px}
+  .titre .fin{margin-left:auto;color:var(--gris2);text-transform:none;letter-spacing:0;font-weight:500}
+  label{font-size:12.5px;color:var(--gris);display:block;margin-bottom:7px}
+  input[type=text],input[type=password],textarea,select{
+    width:100%;background:var(--noir);border:1px solid var(--bord);border-radius:12px;
+    color:var(--blanc);padding:13px 14px;font-family:inherit;font-size:15px;outline:none;
+    -webkit-appearance:none;appearance:none}
+  select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238E8E96' stroke-width='2' fill='none'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;background-position:right 14px center}
+  input:focus,textarea:focus,select:focus{border-color:var(--or)}
+  textarea{resize:vertical;min-height:82px;line-height:1.5}
+  .grille2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .bloc{margin-bottom:14px}
+
+  /* --- boutons --- */
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;
+    background:var(--or);color:#17130A;border:none;border-radius:12px;padding:14px 20px;
+    font-family:inherit;font-weight:700;font-size:14.5px;cursor:pointer;transition:.12s;width:100%}
+  .btn:active{transform:scale(.985)}
+  .btn.sec{background:transparent;color:var(--blanc);border:1px solid var(--bord)}
+  .btn.sec:active{background:var(--carte2)}
+  .btn.mini{padding:10px 14px;font-size:13px;width:auto}
+  .btn:disabled{opacity:.4}
+  .duo{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+  /* --- segmenté --- */
+  .seg{display:grid;grid-auto-flow:column;background:var(--noir);border:1px solid var(--bord);
+    border-radius:12px;padding:4px;gap:4px;margin-bottom:14px}
+  .seg button{background:transparent;color:var(--gris);border:none;border-radius:9px;
+    padding:11px 8px;font-family:inherit;font-weight:600;font-size:14px;cursor:pointer}
+  .seg button.on{background:var(--or);color:#17130A}
+  .seg.xs button{padding:8px 4px;font-size:12.5px}
+
+  /* --- statut --- */
+  #statut{margin-top:14px;font-size:13px;color:var(--bleu);display:none;align-items:center;gap:9px}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--or);animation:p 1.2s infinite;flex:none}
+  @keyframes p{50%{opacity:.2}}
+
+  /* --- historique --- */
+  .run+.run{margin-top:26px;padding-top:22px;border-top:1px solid var(--bord)}
+  .run-h{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+  .run-h b{font-size:14px}
+  .tag{font-size:10.5px;padding:3px 10px;border-radius:20px;border:1px solid var(--bleu);
+    color:var(--bleu);white-space:nowrap}
+  .tag.or{border-color:var(--or);color:var(--or)}
+  .actu{margin-bottom:20px}
+  .actu-t{font-size:13.5px;font-weight:600;margin-bottom:5px;line-height:1.35}
+  .srcs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:11px}
+  .src{font-size:11.5px;color:var(--bleu);text-decoration:none;background:rgba(143,198,242,.09);
+    border-radius:20px;padding:4px 11px}
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+  @media(min-width:560px){.grid{grid-template-columns:repeat(3,1fr)}}
+  @media(min-width:900px){.grid{grid-template-columns:repeat(4,1fr);gap:14px}}
+  .post{background:var(--noir);border:1px solid var(--bord);border-radius:13px;overflow:hidden}
+  .post img{width:100%;display:block;aspect-ratio:4/5;object-fit:cover;background:#141418}
+  .post .bar{display:flex;border-top:1px solid var(--bord)}
+  .post .bar button{flex:1;background:transparent;border:none;color:var(--gris);
+    padding:11px 2px;font-family:inherit;font-size:15px;cursor:pointer}
+  .post .bar button+button{border-left:1px solid var(--bord)}
+  .post .bar button.pri{color:var(--or);font-weight:700;font-size:12.5px}
+  .post .bar button:active{background:var(--carte2)}
+  .vide{color:var(--gris2);font-size:14px;text-align:center;padding:22px 0}
+
+  /* --- éditeur plein écran --- */
+  #ed{position:fixed;inset:0;background:var(--noir);display:none;z-index:60;overflow-y:auto;
+    overscroll-behavior:contain}
+  .ed-top{position:sticky;top:0;z-index:20;background:var(--voile);backdrop-filter:blur(14px);
+    border-bottom:1px solid var(--bord);display:flex;align-items:center;gap:12px;
+    padding:calc(12px + var(--safeT)) 16px 12px}
+  .ed-top .t{font-weight:700;font-size:15px;flex:1}
+  .ed-body{max-width:1080px;margin:0 auto;padding:16px 16px calc(120px + var(--safe))}
+  @media(min-width:900px){.ed-body{display:grid;grid-template-columns:420px 1fr;gap:28px;align-items:start;
+    padding-bottom:40px}}
+  #scene{position:relative;width:100%;max-width:420px;margin:0 auto 16px;aspect-ratio:4/5;
+    border-radius:14px;overflow:hidden;background:#000;touch-action:none;
+    box-shadow:0 10px 40px rgba(0,0,0,.5)}
+  #scene canvas{width:100%;height:100%;display:block}
+  .zoom-l{display:flex;align-items:center;gap:12px;margin-bottom:6px}
+  .zoom-l span{font-size:12px;color:var(--gris);white-space:nowrap;min-width:44px;text-align:right}
+  input[type=range]{flex:1;accent-color:var(--or);height:28px}
+  .hint{font-size:11.5px;color:var(--gris2);line-height:1.5}
+  #resImgs{display:grid;grid-template-columns:repeat(auto-fill,minmax(78px,1fr));gap:7px;margin-top:12px}
+  #resImgs img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:9px;cursor:pointer;
+    border:2px solid transparent;background:#141418}
+  #resImgs img:active{border-color:var(--or)}
+  .barre-bas{position:fixed;left:0;right:0;bottom:0;z-index:15;padding:12px 16px calc(12px + var(--safe));
+    background:var(--voile);backdrop-filter:blur(14px);border-top:1px solid var(--bord)}
+  @media(min-width:900px){.barre-bas{position:static;background:none;border:none;padding:0;backdrop-filter:none}}
+  .toast{position:fixed;bottom:calc(88px + var(--safe));left:50%;transform:translateX(-50%);
+    background:var(--or);color:#17130A;font-weight:700;font-size:13.5px;padding:11px 22px;
+    border-radius:24px;z-index:99;display:none;white-space:nowrap;box-shadow:0 6px 24px var(--ombre)}
+  a{color:var(--bleu)}
+  #cfg{display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div class="logo">INVAST <span>STUDIO</span></div>
+    <div class="ico" id="btnTheme" onclick="basculerTheme()">☾</div>
+    <div class="ico" onclick="basculerCfg()">⚙</div>
+  </div>
+
+  <!-- RÉGLAGES -->
+  <div class="card" id="cfg">
+    <div class="titre">Réglages <span class="fin">stockés sur cet appareil</span></div>
+    <div class="bloc"><label>Token GitHub (repo flash-actu · Contents + Actions)</label>
+      <input type="password" id="cfgPat" placeholder="github_pat_…"></div>
+    <div class="bloc"><label>URL du proxy (Cloudflare Worker)</label>
+      <input type="text" id="cfgProxy" placeholder="https://invast-proxy.…workers.dev"></div>
+    <div class="bloc"><label>Clé API Anthropic (descriptions)</label>
+      <input type="password" id="cfgClaude" placeholder="sk-ant-…"></div>
+    <div class="bloc"><label>Clé Brave (images, optionnel)</label>
+      <input type="password" id="cfgBrave" placeholder="BSA…"></div>
+    <div class="grille2 bloc">
+      <div><label>Bot Telegram</label><input type="password" id="cfgTgTok" placeholder="123:ABC…"></div>
+      <div><label>Chat ID</label><input type="text" id="cfgTgChat" placeholder="123456789"></div>
+    </div>
+    <button class="btn" onclick="sauverCfg()">Enregistrer</button>
+  </div>
+
+  <!-- LANCER -->
+  <div class="card" id="panLancer" style="display:none">
+    <div class="titre">Générer</div>
+    <div class="seg">
+      <button id="mAuto" class="on" onclick="setMode('auto')">Auto</button>
+      <button id="mSujet" onclick="setMode('sujet')">Mon sujet</button>
+    </div>
+    <div id="zoneSujet" style="display:none" class="bloc">
+      <textarea id="sujet" placeholder="Ex : La BCE baisse ses taux de 0,25 point…"></textarea>
+    </div>
+    <div class="grille2 bloc">
+      <div><label>Posts</label><select id="nb"><option>1</option><option>2</option><option selected>3</option></select></div>
+      <div><label>Variantes</label><select id="nv"><option>1</option><option>2</option><option selected>3</option></select></div>
+    </div>
+    <button class="btn" id="btnGo" onclick="lancer()">⚡ Lancer</button>
+    <div id="statut"><span class="dot"></span><span id="statutTxt"></span></div>
+  </div>
+
+  <!-- HISTORIQUE -->
+  <div class="card" id="panHisto" style="display:none">
+    <div class="titre">Historique <span class="fin" onclick="chargerHistorique()" style="cursor:pointer">↻ 7 jours</span></div>
+    <div id="runs"><p class="vide">Chargement…</p></div>
+  </div>
+</div>
+
+<!-- ÉDITEUR -->
+<div id="ed">
+  <div class="ed-top">
+    <div class="ico" onclick="fermerEditeur()">←</div>
+    <div class="t">Éditer</div>
+  </div>
+  <div class="ed-body">
+    <div>
+      <div id="scene"><canvas id="cv" width="1080" height="1350"></canvas></div>
+      <div class="zoom-l">
+        <input type="range" id="edZoom" min="40" max="300" value="100" oninput="setZoom(this.value)">
+        <span id="zoomVal">100 %</span>
+      </div>
+      <p class="hint">Glisse l'image pour la déplacer · dézoome sous 100 % pour la voir entière</p>
+      <div class="duo" style="margin-top:12px">
+        <button class="btn sec mini" style="width:100%" onclick="resetImage()">Recentrer</button>
+        <label class="btn sec mini" style="width:100%;cursor:pointer">Uploader
+          <input type="file" accept="image/*" style="display:none" onchange="chargerFichier(this)"></label>
+      </div>
+    </div>
+
+    <div>
+      <div class="card" style="margin-top:18px">
+        <div class="titre">Titre de la carte</div>
+        <textarea id="edTitre" oninput="rendre()" style="min-height:74px"></textarea>
+      </div>
+
+      <div class="card">
+        <div class="titre">Chercher une image</div>
+        <div style="display:flex;gap:8px">
+          <input type="text" id="qImg" placeholder="ex : logo BCE façade"
+            onkeydown="if(event.key==='Enter')chercherImages()">
+          <button class="btn mini" style="flex:none" onclick="chercherImages()">🔎</button>
+        </div>
+        <div class="seg xs" style="margin:10px 0 0">
+          <button class="on" onclick="setNbImg(10,this)">10</button>
+          <button onclick="setNbImg(20,this)">20</button>
+          <button onclick="setNbImg(30,this)">30</button>
+        </div>
+        <div id="resImgs"></div>
+        <p class="hint" id="imgHint" style="margin-top:8px"></p>
+      </div>
+
+      <div class="card">
+        <div class="titre">Description Instagram</div>
+        <textarea id="edCaption" rows="7"></textarea>
+        <div class="duo" style="margin-top:10px">
+          <button class="btn sec mini" style="width:100%" onclick="genererCaption('court')">↻ Concise</button>
+          <button class="btn sec mini" style="width:100%" onclick="genererCaption('complet')">↻ Complète</button>
+        </div>
+        <button class="btn sec mini" style="width:100%;margin-top:8px" onclick="copierCaption()">⧉ Copier la description</button>
+      </div>
+
+      <div class="card" id="edSources" style="display:none"></div>
+      <p class="hint" id="edSource" style="padding:0 4px"></p>
+    </div>
+  </div>
+  <div class="barre-bas">
+    <div class="duo" style="margin-bottom:8px">
+      <button class="btn" onclick="telechargerCanvas()">⬇ Télécharger</button>
+      <button class="btn sec" onclick="envoyerCanvasTelegram()">📤 Telegram</button>
+    </div>
+    <button class="btn sec" id="btnSave" onclick="enregistrerModifs()">💾 Enregistrer les modifications</button>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const REPO='ArnaudSau/flash-actu', API='https://api.github.com/repos/'+REPO;
+const CTA='Abonne toi à @arnaud_saudrais pour suivre ça avec moi';
+let TOKEN=localStorage.getItem('invast_pat')||'';
+const H=(raw)=>({'Authorization':'Bearer '+TOKEN,
+  'Accept': raw?'application/vnd.github.raw+json':'application/vnd.github+json',
+  'X-GitHub-Api-Version':'2022-11-28'});
+function toast(t){const e=document.getElementById('toast');e.textContent=t;e.style.display='block';
+  clearTimeout(e._t);e._t=setTimeout(()=>e.style.display='none',2600);}
+
+/* ---------- thème ---------- */
+function appliquerTheme(clair){
+  document.body.classList.toggle('clair',clair);
+  document.getElementById('btnTheme').textContent=clair?'☀':'☾';
+  document.querySelector('meta[name=theme-color]').setAttribute('content',clair?'#F6F5F1':'#0A0A0C');
+  localStorage.setItem('invast_theme',clair?'clair':'sombre');
+}
+function basculerTheme(){appliquerTheme(!document.body.classList.contains('clair'));}
+appliquerTheme(localStorage.getItem('invast_theme')==='clair');
+
+/* ---------- réglages ---------- */
+function basculerCfg(){const c=document.getElementById('cfg');
+  const ouvre=c.style.display!=='block';c.style.display=ouvre?'block':'none';
+  if(!ouvre)return;
+  cfgPat.value=TOKEN;
+  cfgProxy.value=localStorage.getItem('invast_proxy')||'';
+  cfgClaude.value=localStorage.getItem('invast_claude')||'';
+  cfgBrave.value=localStorage.getItem('invast_brave')||'';
+  cfgTgTok.value=localStorage.getItem('invast_tg_tok')||'';
+  cfgTgChat.value=localStorage.getItem('invast_tg_chat')||'';}
+function sauverCfg(){
+  const p=cfgPat.value.trim();if(p){TOKEN=p;localStorage.setItem('invast_pat',p);}
+  localStorage.setItem('invast_proxy',cfgProxy.value.trim().replace(/\/+$/,''));
+  localStorage.setItem('invast_claude',cfgClaude.value.trim());
+  localStorage.setItem('invast_brave',cfgBrave.value.trim());
+  localStorage.setItem('invast_tg_tok',cfgTgTok.value.trim());
+  localStorage.setItem('invast_tg_chat',cfgTgChat.value.trim());
+  document.getElementById('cfg').style.display='none';toast('Réglages enregistrés');init();}
+async function init(){
+  if(!TOKEN){basculerCfg();return}
+  const r=await fetch(API,{headers:H()});
+  if(!r.ok){toast('Token GitHub refusé');basculerCfg();return}
+  panLancer.style.display='block';panHisto.style.display='block';
+  chargerHistorique();verifierRunEnCours();
+}
+
+/* ---------- lancement ---------- */
+let MODE='auto';
+function setMode(m){MODE=m;
+  mAuto.classList.toggle('on',m==='auto');mSujet.classList.toggle('on',m==='sujet');
+  zoneSujet.style.display=m==='sujet'?'block':'none';}
+async function lancer(){
+  const sujet=MODE==='sujet'?document.getElementById('sujet').value.trim():'';
+  if(MODE==='sujet'&&!sujet)return toast('Écris ton sujet');
+  const inputs={sujet,nb_actus:nb.value,nb_variantes:nv.value,requete_test:''};
+  const r=await fetch(API+'/actions/workflows/cron.yml/dispatches',{method:'POST',
+    headers:{...H(),'Content-Type':'application/json'},
+    body:JSON.stringify({ref:'main',inputs})});
+  if(r.status!==204)return toast('Échec du lancement');
+  btnGo.disabled=true;statutMsg('Génération lancée… (~5 min)');setTimeout(suivreRun,8000);
+}
+function statutMsg(t){statut.style.display='flex';statutTxt.textContent=t;}
+async function suivreRun(){
+  const r=await fetch(API+'/actions/runs?per_page=1',{headers:H()});
+  const run=(await r.json()).workflow_runs?.[0];if(!run)return;
+  if(run.status==='completed'){
+    statutMsg(run.conclusion==='success'?'✅ Terminé':'❌ Échec (voir GitHub)');
+    btnGo.disabled=false;document.querySelector('#statut .dot').style.display='none';
+    setTimeout(chargerHistorique,4000);
+  }else{statutMsg('En cours…');document.querySelector('#statut .dot').style.display='block';
+    setTimeout(suivreRun,10000);}
+}
+async function verifierRunEnCours(){
+  const r=await fetch(API+'/actions/runs?status=in_progress&per_page=1',{headers:H()});
+  if((await r.json()).total_count>0){btnGo.disabled=true;statutMsg('Un run est en cours…');suivreRun();}
+}
+
+/* ---------- historique ---------- */
+async function chargerHistorique(){
+  runs.innerHTML='<p class="vide">Chargement…</p>';
+  const r=await fetch(API+'/contents/archive',{headers:H()});
+  if(r.status===404){runs.innerHTML='<p class="vide">Aucune archive — lance une génération</p>';return}
+  const ds=(await r.json()).filter(d=>d.type==='dir').sort((a,b)=>b.name.localeCompare(a.name));
+  runs.innerHTML='';
+  for(const d of ds){
+    try{const m=await (await fetch(API+'/contents/archive/'+d.name+'/manifest.json',{headers:H(true)})).json();
+      runs.appendChild(blocRun(d.name,m));}catch(e){}
+  }
+  if(!runs.children.length)runs.innerHTML='<p class="vide">Aucune archive</p>';
+}
+function blocRun(nom,m){
+  const div=document.createElement('div');div.className='run';
+  const date=nom.replace('run_','').replace(/(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})/,'$3/$2 · $4h$5');
+  const tag=m.mode==='sujet'?'<span class="tag or">Sujet</span>':'<span class="tag">Auto</span>';
+  div.innerHTML='<div class="run-h"><b>'+date+'</b>'+tag+'</div>';
+  m.actus.forEach(a=>{
+    const bloc=document.createElement('div');bloc.className='actu';
+    const srcs=(a.sources||[]).filter(u=>u).slice(0,2)
+      .map(u=>'<a class="src" href="'+u+'" target="_blank" rel="noopener">🔗 '+dom(u)+'</a>').join('');
+    bloc.innerHTML='<div class="actu-t">'+echap((a.sujet||'').slice(0,110))+'</div>'
+      +(srcs?'<div class="srcs">'+srcs+'</div>':'');
+    const g=document.createElement('div');g.className='grid';
+    a.variantes.forEach(v=>{
+      const p=document.createElement('div');p.className='post';
+      const img=document.createElement('img');img.loading='lazy';img.alt='';
+      chargerImage('archive/'+nom+'/'+v.carte,img);
+      const bar=document.createElement('div');bar.className='bar';
+      const b1=document.createElement('button');b1.textContent='⬇';
+      b1.onclick=()=>telechargerFichier('archive/'+nom+'/'+v.carte,v.carte);
+      const b2=document.createElement('button');b2.textContent='📤';
+      b2.onclick=()=>envoyerArchiveTelegram(nom,v);
+      const b3=document.createElement('button');b3.textContent='Éditer';b3.className='pri';
+      b3.onclick=()=>ouvrirEditeur(nom,a,v);
+      bar.append(b1,b2,b3);p.append(img,bar);g.appendChild(p);
+    });
+    bloc.appendChild(g);div.appendChild(bloc);
+  });
+  return div;
+}
+const echap=s=>(s||'').replace(/</g,'&lt;');
+const dom=u=>{try{return new URL(u).hostname.replace('www.','')}catch(e){return 'source'}};
+async function chargerImage(chemin,imgEl){
+  try{const r=await fetch(API+'/contents/'+chemin+'?_='+Date.now(),{headers:H(true)});
+    imgEl.src=URL.createObjectURL(await r.blob());}catch(e){}
+}
+async function telechargerFichier(chemin,nom){
+  const r=await fetch(API+'/contents/'+chemin,{headers:H(true)});
+  const a=document.createElement('a');a.href=URL.createObjectURL(await r.blob());a.download=nom;a.click();
+  toast('Téléchargé');
+}
+
+/* ---------- Telegram ---------- */
+function tgCfg(){const t=localStorage.getItem('invast_tg_tok'),c=localStorage.getItem('invast_tg_chat');
+  if(!t||!c){toast('Ajoute Telegram dans ⚙');return null}return {t,c};}
+async function envoyerTelegram(blob,caption){
+  const cfg=tgCfg();if(!cfg)return;
+  const fd=new FormData();fd.append('chat_id',cfg.c);
+  // sendDocument = fichier PNG intact (sendPhoto recompresse en JPEG et ramollit le texte)
+  fd.append('document',blob,'flash-actu.png');
+  fd.append('caption',(caption||'').slice(0,1024));
+  try{const r=await fetch('https://api.telegram.org/bot'+cfg.t+'/sendDocument',{method:'POST',body:fd});
+    toast(r.ok?'📤 Envoyé sur Telegram':'Échec de l\'envoi');}catch(e){toast('Échec de l\'envoi');}
+}
+async function envoyerArchiveTelegram(run,v){
+  const r=await fetch(API+'/contents/archive/'+run+'/'+v.carte,{headers:H(true)});
+  envoyerTelegram(await r.blob(),assurerCTA(v.caption||v.titre));
+}
+function envoyerCanvasTelegram(){
+  cv.toBlob(b=>envoyerTelegram(b,edCaption.value),'image/png');
+}
+
+/* ---------- éditeur ---------- */
+const T={W:1080,H:1350,
+  handle:{txt:'arnaud_saudrais',size:28,x:57,y:62,ph:28,pv:9},
+  sticker:{txt:'Flash Actu',size:34,ph:18,pv:12,r:10,bg:'#E63A2B'},
+  titre:{max:66,min:46,lh:1.27,mg:75,md:60,mb:90,lmax:5,gap:38},
+  degrade:{debut:.30,plein:.78}};
+let ED={img:null,zoom:1,ox:0,oy:0,base:1,drag:null,actu:null,varte:null};
+let ED_RUN='';
+const cv=document.getElementById('cv'),ctx=cv.getContext('2d',{alpha:false});
+ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
+
+async function ouvrirEditeur(run,actu,v){
+  ED_RUN=run;
+  document.getElementById('ed').style.display='block';document.body.style.overflow='hidden';
+  edTitre.value=v.titre;edCaption.value=assurerCTA(v.caption||'');
+  edSource.textContent='Image : '+(v.source_image||'—');
+  edZoom.value=100;zoomVal.textContent='100 %';
+  resImgs.innerHTML='';imgHint.textContent='';qImg.value='';
+  const srcs=(actu.sources||[]).filter(u=>u).slice(0,2)
+    .map(u=>'<a class="src" href="'+u+'" target="_blank" rel="noopener">🔗 '+dom(u)+'</a>').join('');
+  edSources.style.display=srcs?'block':'none';
+  edSources.innerHTML=srcs?'<div class="titre">Sources (fact-check)</div><div class="srcs">'+srcs+'</div>':'';
+  ED={img:null,zoom:1,ox:0,oy:0,base:1,drag:null,actu,varte:v};
+  try{const r=await fetch(API+'/contents/archive/'+run+'/'+v.fond,{headers:H(true)});
+    await chargerBlob(await r.blob());}catch(e){rendre()}
+}
+function fermerEditeur(){document.getElementById('ed').style.display='none';document.body.style.overflow='';}
+function assurerCTA(c){c=(c||'').trim();return c.endsWith(CTA)?c:(c?c+'\n\n':'')+CTA;}
+function chargerBlob(blob){return new Promise(res=>{
+  const i=new Image();i.onload=()=>{ED.img=i;
+    ED.base=Math.max(T.W/i.width,T.H/i.height);ED.zoom=1;ED.ox=0;ED.oy=0;
+    edZoom.value=100;zoomVal.textContent='100 %';rendre();res()};
+  i.src=URL.createObjectURL(blob);});}
+function chargerFichier(inp){if(inp.files[0])chargerBlob(inp.files[0]);}
+function resetImage(){if(!ED.img)return;ED.zoom=1;ED.ox=0;ED.oy=0;
+  edZoom.value=100;zoomVal.textContent='100 %';rendre();}
+function setZoom(v){ED.zoom=v/100;zoomVal.textContent=v+' %';rendre();}
+
+/* déplacement libre (souris + tactile), sans contrainte de bord */
+const scene=document.getElementById('scene');
+scene.addEventListener('pointerdown',e=>{e.preventDefault();
+  ED.drag={x:e.clientX,y:e.clientY,ox:ED.ox,oy:ED.oy};scene.setPointerCapture(e.pointerId)});
+scene.addEventListener('pointermove',e=>{if(!ED.drag)return;e.preventDefault();
+  const k=T.W/scene.clientWidth;
+  ED.ox=ED.drag.ox+(e.clientX-ED.drag.x)*k;ED.oy=ED.drag.oy+(e.clientY-ED.drag.y)*k;rendre();});
+['pointerup','pointercancel','pointerleave'].forEach(ev=>scene.addEventListener(ev,()=>ED.drag=null));
+
+function rendre(){
+  ctx.fillStyle='#000';ctx.fillRect(0,0,T.W,T.H);
+  if(ED.img){
+    const s=ED.base*ED.zoom,w=ED.img.width*s,h=ED.img.height*s;
+    // position libre : l'image peut dépasser ou laisser des bandes noires
+    ctx.drawImage(ED.img,(T.W-w)/2+ED.ox,(T.H-h)/2+ED.oy,w,h);
+  }
+  const g=ctx.createLinearGradient(0,0,0,T.H);
+  g.addColorStop(0,'rgba(0,0,0,0)');g.addColorStop(T.degrade.debut,'rgba(0,0,0,0)');
+  g.addColorStop(T.degrade.plein,'rgba(0,0,0,1)');g.addColorStop(1,'rgba(0,0,0,1)');
+  ctx.fillStyle=g;ctx.fillRect(0,0,T.W,T.H);
+  const hd=T.handle;ctx.font='800 '+hd.size+'px Poppins';ctx.textBaseline='middle';
+  const tw=ctx.measureText(hd.txt).width,pw=tw+2*hd.ph,ph=hd.size+2*hd.pv;
+  rr(hd.x,hd.y,pw,ph,ph/2);ctx.fillStyle='#fff';ctx.fill();
+  ctx.fillStyle='#000';ctx.fillText(hd.txt,hd.x+hd.ph,hd.y+ph/2+2);
+  const ti=T.titre,texte=edTitre.value.trim();
+  const largMax=T.W-ti.mg-ti.md;let size=ti.max,lignes;
+  for(;;){ctx.font='800 '+size+'px Poppins';lignes=couper(texte,largMax);
+    if(lignes.length<=ti.lmax||size<=ti.min)break;size-=2;}
+  const lh=Math.round(size*ti.lh),yT=T.H-ti.mb-lh*lignes.length;
+  const st=T.sticker;ctx.font='800 '+st.size+'px Poppins';
+  const sw=ctx.measureText(st.txt).width+2*st.ph,sh=st.size+2*st.pv,yS=yT-ti.gap-sh;
+  rr(ti.mg,yS,sw,sh,st.r);ctx.fillStyle=st.bg;ctx.fill();
+  ctx.fillStyle='#fff';ctx.fillText(st.txt,ti.mg+st.ph,yS+sh/2+2);
+  ctx.font='800 '+size+'px Poppins';ctx.fillStyle='#fff';
+  lignes.forEach((l,i)=>ctx.fillText(l,ti.mg,yT+i*lh+lh/2+2));
+}
+function couper(txt,max){
+  const mots=txt.split(/\s+/),out=[];let cur='';
+  for(const m of mots){const t=(cur+' '+m).trim();
+    if(ctx.measureText(t).width<=max)cur=t;else{if(cur)out.push(cur);cur=m;}}
+  if(cur)out.push(cur);return out.length?out:[''];
+}
+function rr(x,y,w,h,r){ctx.beginPath();ctx.roundRect(x,y,w,h,r);}
+function telechargerCanvas(){
+  cv.toBlob(b=>{const a=document.createElement('a');a.href=URL.createObjectURL(b);
+    a.download='flash-actu-'+Date.now()+'.png';a.click();toast('Téléchargé');},'image/png');
+}
+
+/* ---------- recherche d'images ---------- */
+function proxyBase(){return localStorage.getItem('invast_proxy')||''}
+function viaProxy(url,opts){
+  const p=proxyBase();
+  return p?fetch(p+'/?url='+encodeURIComponent(url),opts)
+          :fetch('https://api.allorigins.win/raw?url='+encodeURIComponent(url));
+}
+async function viaProxyTexte(url,opts){
+  const p=proxyBase();
+  if(p)return (await fetch(p+'/?url='+encodeURIComponent(url),opts)).text();
+  const r=await fetch('https://api.allorigins.win/get?url='+encodeURIComponent(url));
+  return (await r.json()).contents||'';
+}
+let NBIMG=10,RESULTATS=[];
+function setNbImg(n,btn){NBIMG=n;
+  btn.parentElement.querySelectorAll('button').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');afficherResultats();}
+async function chercherImages(){
+  const q=qImg.value.trim();if(!q)return;
+  if(!proxyBase()){imgHint.textContent='⚠️ Configure l\'URL du proxy dans ⚙';return}
+  imgHint.textContent='Recherche…';RESULTATS=[];
+  try{RESULTATS=await bingImages(q);}catch(e){}
+  if(RESULTATS.length<10){try{RESULTATS=RESULTATS.concat(await braveImages(q));}catch(e){}}
+  if(RESULTATS.length<10){try{RESULTATS=RESULTATS.concat(await googleImages(q));}catch(e){}}
+  const vus=new Set();RESULTATS=RESULTATS.filter(r=>r.url&&!vus.has(r.url)&&vus.add(r.url));
+  imgHint.textContent=RESULTATS.length?RESULTATS.length+' images — touche pour utiliser':'Rien trouvé';
+  afficherResultats();
+}
+async function bingImages(q){
+  const html=await viaProxyTexte('https://www.bing.com/images/async?q='+encodeURIComponent(q)+'&first=0&count=35&mmasync=1');
+  const re=/m="([^"]+)"/g;let m;const out=[];
+  while((m=re.exec(html))&&out.length<30){
+    try{const d=JSON.parse(m[1].replace(/&quot;/g,'"').replace(/&amp;/g,'&'));
+      if(d.murl)out.push({thumb:d.turl||d.murl,url:d.murl});}catch(e){}}
+  return out;
+}
+async function braveImages(q){
+  const cle=localStorage.getItem('invast_brave');if(!cle||!proxyBase())return [];
+  const r=await viaProxy('https://api.search.brave.com/res/v1/images/search?q='+encodeURIComponent(q)+'&count=30&safesearch=off&search_lang=fr&country=FR',
+    {headers:{'X-Subscription-Token':cle,'Accept':'application/json'}});
+  if(!r.ok)return [];
+  const j=await r.json();
+  return (j.results||[]).map(it=>({thumb:(it.thumbnail||{}).src||'',url:(it.properties||{}).url||''}))
+    .filter(x=>x.url&&x.thumb);
+}
+async function googleImages(q){
+  const html=await viaProxyTexte('https://www.google.com/search?q='+encodeURIComponent(q)+'&tbm=isch&hl=fr&gl=fr');
+  const re=/\["(https?:\/\/[^"]{10,400}?\.(?:jpe?g|png|webp))",\s*\d+,\s*\d+\]/g;
+  let m,thumb=null;const out=[];
+  while((m=re.exec(html))&&out.length<30){
+    const u=m[1];
+    if(u.includes('gstatic.com')){thumb=u;continue}
+    if(u.includes('google.'))continue;
+    out.push({thumb:thumb||u,url:u});thumb=null;}
+  return out;
+}
+function afficherResultats(){
+  resImgs.innerHTML='';
+  RESULTATS.slice(0,NBIMG).forEach(r=>{
+    const i=document.createElement('img');i.src=r.thumb;i.loading='lazy';
+    i.onclick=()=>utiliserImage(r.url);i.onerror=()=>i.remove();
+    resImgs.appendChild(i);});
+}
+async function utiliserImage(url){
+  imgHint.textContent='Chargement…';
+  try{const r=await viaProxy(url);if(!r.ok)throw 0;
+    await chargerBlob(await r.blob());
+    imgHint.textContent='Image remplacée ✔';edSource.textContent='Image : '+url;
+  }catch(e){imgHint.textContent='Image bloquée, essaie-en une autre';}
+}
+
+/* ---------- descriptions (Claude) ---------- */
+async function genererCaption(mode){
+  const cle=localStorage.getItem('invast_claude');
+  if(!cle)return toast('Ajoute ta clé Anthropic dans ⚙');
+  const titre=edTitre.value.trim(),sujet=ED.actu?.sujet||titre;
+  const srcs=(ED.actu?.sources||[]).slice(0,2).join(' , ');
+  const consigne=mode==='court'
+    ?'CONCISE : 3 lignes de texte maximum.'
+    :'COMPLÈTE : plus de contexte et d\'explication, mais phrases courtes, aérées, zéro jargon.';
+  const prompt='Écris une description Instagram en français pour ce post finance grand public.\n'
+    +'Sujet : '+sujet+'\nTitre : '+titre+(srcs?'\nSources : '+srcs:'')+'\n\n'
+    +'Style : direct, punchy, vulgarisé, crédible (aucun chiffre inventé). '+consigne+'\n'
+    +'INTERDIT : aucun hashtag, aucun tiret cadratin, aucun double tiret, aucun underscore.\n'
+    +'DERNIÈRE LIGNE EXACTEMENT : « '+CTA+' »\n'
+    +'Réponds UNIQUEMENT avec la description.';
+  edCaption.value='Génération…';
+  try{
+    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',
+      headers:{'x-api-key':cle,'anthropic-version':'2023-06-01',
+               'anthropic-dangerous-direct-browser-access':'true','content-type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:600,
+        messages:[{role:'user',content:prompt}]})});
+    const j=await r.json();
+    let txt=(j.content?.[0]?.text||'').trim();
+    txt=txt.split('\n').filter(l=>!/^\s*#\w/.test(l)).join('\n');  // sécurité anti-hashtags
+    edCaption.value=assurerCTA(txt)||'(échec, réessaie)';
+  }catch(e){edCaption.value='';toast('Échec de la génération');}
+}
+/* ---------- enregistrer dans l'archive ---------- */
+const b64=blob=>new Promise(r=>{const fr=new FileReader();
+  fr.onload=()=>r(fr.result.split(',')[1]);fr.readAsDataURL(blob)});
+/* API Git de GitHub : accepte les fichiers > 1 Mo (contrairement à /contents)
+   et écrit la carte + le manifest en UN SEUL commit. */
+async function gh(chemin,opts){
+  const r=await fetch(API+chemin,{headers:{...H(),'Content-Type':'application/json'},...(opts||{})});
+  if(!r.ok) throw new Error(chemin.split('/').pop()+' '+r.status);
+  return r.json();
+}
+async function commitFichiers(fichiers,message){
+  const arbre=[];
+  for(const f of fichiers){
+    const b=await gh('/git/blobs',{method:'POST',
+      body:JSON.stringify({content:f.b64,encoding:'base64'})});
+    arbre.push({path:f.chemin,mode:'100644',type:'blob',sha:b.sha});
+  }
+  const ref=await gh('/git/ref/heads/main');
+  const parent=ref.object.sha;
+  const cp=await gh('/git/commits/'+parent);
+  const tree=await gh('/git/trees',{method:'POST',
+    body:JSON.stringify({base_tree:cp.tree.sha,tree:arbre})});
+  const commit=await gh('/git/commits',{method:'POST',
+    body:JSON.stringify({message,tree:tree.sha,parents:[parent]})});
+  await gh('/git/refs/heads/main',{method:'PATCH',body:JSON.stringify({sha:commit.sha})});
+}
+async function enregistrerModifs(){
+  if(!ED_RUN||!ED.varte) return toast('Rien à enregistrer');
+  const b=document.getElementById('btnSave');
+  b.disabled=true;b.textContent='Enregistrement…';
+  try{
+    // 1. la carte retouchée
+    const blob=await new Promise(res=>cv.toBlob(res,'image/png'));
+    const carteB64=await b64(blob);
+    // 2. titre + description mis à jour dans le manifest (lecture en brut = fiable)
+    const txtM=await (await fetch(API+'/contents/archive/'+ED_RUN+'/manifest.json',
+      {headers:H(true)})).text();
+    const m=JSON.parse(txtM);
+    m.actus.forEach(a=>a.variantes.forEach(v=>{
+      if(v.carte===ED.varte.carte){v.titre=edTitre.value;v.caption=edCaption.value;}}));
+    const manB64=btoa(unescape(encodeURIComponent(JSON.stringify(m,null,1))));
+    // 3. un seul commit
+    await commitFichiers([
+      {chemin:'archive/'+ED_RUN+'/'+ED.varte.carte,b64:carteB64},
+      {chemin:'archive/'+ED_RUN+'/manifest.json',b64:manB64}],
+      'edit '+ED.varte.carte+' [skip ci]');
+    ED.varte.titre=edTitre.value;ED.varte.caption=edCaption.value;
+    toast('💾 Modifications enregistrées');
+    setTimeout(chargerHistorique,2000);
+  }catch(e){toast('Échec : '+String(e.message||e).slice(0,50));}
+  b.disabled=false;b.textContent='💾 Enregistrer les modifications';
+}
+function copierCaption(){navigator.clipboard.writeText(edCaption.value);toast('Description copiée');}
+
+document.fonts.ready.then(()=>init());
+</script>
+</body>
+</html>
