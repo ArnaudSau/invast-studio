@@ -841,13 +841,35 @@ async function ouvrirEditeur(run,actu,v){
     .map(u=>'<a class="src" href="'+u+'" target="_blank" rel="noopener">🔗 '+dom(u)+'</a>').join('');
   edSources.style.display=srcs?'block':'none';
   edSources.innerHTML=srcs?'<div class="titre">Sources (fact-check)</div><div class="srcs">'+srcs+'</div>':'';
-  ED={img:null,zoom:1,ox:0,oy:0,base:1,drag:null,actu,varte:v};
+  ED={img:null,zoom:1,ox:0,oy:0,base:1,drag:null,actu,varte:v,fondModifie:false};
   // accroches de départ : les autres variantes de la même actu
   ALTS=(actu.variantes||[]).filter(x=>x.titre&&x.titre.trim()!==(v.titre||'').trim())
         .map(x=>({txt:x.titre}));
   PILE=[];afficherAlts();
   try{const r=await fetch(API+'/contents/archive/'+run+'/'+v.fond,{headers:H(true)});
-    await chargerBlob(await r.blob());}catch(e){rendre()}
+    await chargerBlob(await r.blob());
+    appliquerEdition(v.edition);      // on retrouve la carte telle qu'on l'a laissée
+  }catch(e){rendre()}
+}
+/* Rejoue les réglages sauvegardés (cadrage, taille, graisse, positions).
+   Sans ça, rouvrir une carte repartait du fond d'origine et le travail
+   d'édition semblait perdu. */
+function appliquerEdition(e){
+  if(!e)return;
+  ED.zoom=e.zoom??1;ED.ox=e.ox??0;ED.oy=e.oy??0;
+  edZoom.value=Math.round(ED.zoom*100);zoomVal.textContent=edZoom.value+' %';
+  if(e.titre){Object.assign(T.titre,e.titre);
+    document.getElementById('txtTaille').value=T.titre.max;
+    document.getElementById('tailleVal').textContent=T.titre.max;
+    setGraisse(T.titre.poids||700);}
+  if(e.sticker){T.sticker.ox=e.sticker.ox||0;T.sticker.oy=e.sticker.oy||0;}
+  rendre();
+}
+function etatEdition(){
+  const t=T.titre;
+  return {zoom:ED.zoom,ox:ED.ox,oy:ED.oy,
+    titre:{max:t.max,min:t.min,poids:t.poids,ox:t.ox,oy:t.oy},
+    sticker:{ox:T.sticker.ox,oy:T.sticker.oy}};
 }
 
 /* ---------- accroches alternatives ---------- */
@@ -929,7 +951,7 @@ function chargerBlob(blob){return new Promise(res=>{
     ED.base=Math.max(T.W/i.width,T.H/i.height);ED.zoom=1;ED.ox=0;ED.oy=0;
     edZoom.value=100;zoomVal.textContent='100 %';rendre();res()};
   i.src=URL.createObjectURL(blob);});}
-function chargerFichier(inp){if(inp.files[0])chargerBlob(inp.files[0]);}
+function chargerFichier(inp){if(inp.files[0]){ED.fondModifie=true;chargerBlob(inp.files[0]);}}
 /* Recentrer agit sur l'élément sélectionné, pas systématiquement sur l'image */
 function resetImage(){
   if(CIBLE!=='image'){resetTexte();rendre();return}
@@ -1057,6 +1079,7 @@ function afficherResultats(){
 async function utiliserImage(url){
   imgHint.textContent='Chargement…';
   try{const r=await viaProxy(url);if(!r.ok)throw 0;
+    ED.fondModifie=true;
     await chargerBlob(await r.blob());
     imgHint.textContent='Image remplacée ✔';edSource.textContent='Image : '+url;
   }catch(e){imgHint.textContent='Image bloquée, essaie-en une autre';}
@@ -1123,20 +1146,33 @@ async function enregistrerModifs(){
   try{
     // 1. la carte retouchée
     const blob=await new Promise(res=>cv.toBlob(res,'image/png'));
-    const carteB64=await b64(blob);
-    // 2. titre + description mis à jour dans le manifest (lecture en brut = fiable)
+    const fichiers=[{chemin:'archive/'+ED_RUN+'/'+ED.varte.carte,b64:await b64(blob)}];
+    // 2. si le fond a été remplacé, on le sauve aussi : sans lui, rouvrir la
+    //    carte sur un autre appareil rechargeait l'image d'origine
+    let nomFond=ED.varte.fond;
+    if(ED.fondModifie&&ED.img){
+      nomFond=ED.varte.carte.replace(/\.png$/i,'')+'_fond.jpg';
+      const c2=document.createElement('canvas');
+      c2.width=ED.img.naturalWidth;c2.height=ED.img.naturalHeight;
+      c2.getContext('2d').drawImage(ED.img,0,0);
+      const bf=await new Promise(res=>c2.toBlob(res,'image/jpeg',0.92));
+      fichiers.push({chemin:'archive/'+ED_RUN+'/'+nomFond,b64:await b64(bf)});
+    }
+    // 3. manifest : textes + fond + réglages d'édition (lecture en brut = fiable)
     const txtM=await (await fetch(API+'/contents/archive/'+ED_RUN+'/manifest.json',
       {headers:H(true)})).text();
     const m=JSON.parse(txtM);
+    const edition=etatEdition();
     m.actus.forEach(a=>a.variantes.forEach(v=>{
-      if(v.carte===ED.varte.carte){v.titre=edTitre.value;v.caption=edCaption.value;}}));
-    const manB64=btoa(unescape(encodeURIComponent(JSON.stringify(m,null,1))));
-    // 3. un seul commit
-    await commitFichiers([
-      {chemin:'archive/'+ED_RUN+'/'+ED.varte.carte,b64:carteB64},
-      {chemin:'archive/'+ED_RUN+'/manifest.json',b64:manB64}],
-      'edit '+ED.varte.carte+' [skip ci]');
+      if(v.carte===ED.varte.carte){
+        v.titre=edTitre.value;v.caption=edCaption.value;
+        v.fond=nomFond;v.edition=edition;}}));
+    fichiers.push({chemin:'archive/'+ED_RUN+'/manifest.json',
+      b64:btoa(unescape(encodeURIComponent(JSON.stringify(m,null,1))))});
+    // 4. un seul commit
+    await commitFichiers(fichiers,'edit '+ED.varte.carte+' [skip ci]');
     ED.varte.titre=edTitre.value;ED.varte.caption=edCaption.value;
+    ED.varte.fond=nomFond;ED.varte.edition=edition;ED.fondModifie=false;
     toast('💾 Modifications enregistrées');
     setTimeout(chargerHistorique,2000);
   }catch(e){toast('Échec : '+String(e.message||e).slice(0,50));}
