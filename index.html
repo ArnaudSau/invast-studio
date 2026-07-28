@@ -617,8 +617,12 @@ async function chercherActuWeb(){
   try{
     const u='https://www.bing.com/news/search?q='+encodeURIComponent(q)
       +'&format=RSS&setmkt=fr-FR&_='+Date.now();
+    // Bing enveloppe chaque lien dans un redirecteur : on récupère la vraie URL
+    // sinon toutes les sources s'affichaient « bing.com »
+    const vraiLien=x=>{try{const p=new URL(x).searchParams.get('url');
+      return p?decodeURIComponent(p):x}catch(e){return x}};
     const arts=parserFlux(await viaProxyTexte(u),'')
-      .map(a=>({...a,source:dom(a.url)}))
+      .map(a=>{const url=vraiLien(a.url);return {...a,url,source:dom(url)}})
       // score plancher : une recherche explicite passe avant le filtre finance
       .map(a=>({...a,score:Math.max(2,scoreActu(a)),viral:scoreViral(a)}));
     if(!arts.length){zone.innerHTML='<p class="vide">Aucun résultat</p>';return}
