@@ -281,6 +281,12 @@
         <span id="tailleVal">62</span>
       </div>
       <div class="zoom-l">
+        <label style="margin:0;min-width:52px">Largeur</label>
+        <input type="range" id="txtLarg" min="500" max="1010" value="924"
+          oninput="setLargeur(this.value)">
+        <span id="largVal">86 %</span>
+      </div>
+      <div class="zoom-l">
         <label style="margin:0;min-width:52px">Graisse</label>
         <div class="seg xs" style="flex:1;margin:0">
           <button id="g500" onclick="setGraisse(500)">Léger</button>
@@ -800,9 +806,9 @@ const T={W:1080,H:1350,
   // ox/oy : décalages libres appliqués par l'éditeur
   sticker:{txt:'Flash Actu',size:34,ph:18,pv:12,r:10,bg:'#E63A2B',ox:0,oy:0},
   titre:{max:62,min:44,lh:1.27,mg:84,md:72,mb:90,lmax:5,gap:38,
-         poids:700,ox:0,oy:0},
+         poids:700,ox:0,oy:0,larg:924},      // larg = largeur du bloc de texte
   degrade:{debut:.30,plein:.78}};
-const TITRE_DEF={max:62,min:44,mg:84,md:72,poids:700,ox:0,oy:0};
+const TITRE_DEF={max:62,min:44,mg:84,md:72,poids:700,ox:0,oy:0,larg:924};
 let CIBLE='image';                      // ce que le glisser déplace
 function setCible(c){
   CIBLE=c;
@@ -813,6 +819,11 @@ function setTaille(v){
   T.titre.max=+v;T.titre.min=Math.min(+v,Math.round(v*0.72));
   document.getElementById('tailleVal').textContent=v;rendre();
 }
+function setLargeur(v){
+  T.titre.larg=+v;
+  document.getElementById('largVal').textContent=Math.round(v/T.W*100)+' %';
+  rendre();
+}
 function setGraisse(p){
   T.titre.poids=p;
   [500,600,700,800].forEach(k=>document.getElementById('g'+k).classList.toggle('on',k===p));
@@ -822,6 +833,8 @@ function resetTexte(){
   Object.assign(T.titre,TITRE_DEF);T.sticker.ox=0;T.sticker.oy=0;
   document.getElementById('txtTaille').value=TITRE_DEF.max;
   document.getElementById('tailleVal').textContent=TITRE_DEF.max;
+  document.getElementById('txtLarg').value=TITRE_DEF.larg;
+  document.getElementById('largVal').textContent=Math.round(TITRE_DEF.larg/T.W*100)+' %';
   setGraisse(TITRE_DEF.poids);
 }
 let ED={img:null,zoom:1,ox:0,oy:0,base:1,drag:null,actu:null,varte:null};
@@ -861,6 +874,8 @@ function appliquerEdition(e){
   if(e.titre){Object.assign(T.titre,e.titre);
     document.getElementById('txtTaille').value=T.titre.max;
     document.getElementById('tailleVal').textContent=T.titre.max;
+    document.getElementById('txtLarg').value=T.titre.larg;
+    document.getElementById('largVal').textContent=Math.round(T.titre.larg/T.W*100)+' %';
     setGraisse(T.titre.poids||700);}
   if(e.sticker){T.sticker.ox=e.sticker.ox||0;T.sticker.oy=e.sticker.oy||0;}
   rendre();
@@ -868,7 +883,7 @@ function appliquerEdition(e){
 function etatEdition(){
   const t=T.titre;
   return {zoom:ED.zoom,ox:ED.ox,oy:ED.oy,
-    titre:{max:t.max,min:t.min,poids:t.poids,ox:t.ox,oy:t.oy},
+    titre:{max:t.max,min:t.min,poids:t.poids,ox:t.ox,oy:t.oy,larg:t.larg},
     sticker:{ox:T.sticker.ox,oy:T.sticker.oy}};
 }
 
@@ -989,7 +1004,7 @@ function rendre(){
   ctx.fillStyle='#000';ctx.fillText(hd.txt,hd.x+hd.ph,hd.y+ph/2+2);
   const ti=T.titre,texte=edTitre.value.trim(),P=ti.poids;
   const xT=ti.mg+ti.ox;                       // décalages libres de l'éditeur
-  const largMax=T.W-ti.mg-ti.md;let size=ti.max,lignes;
+  const largMax=ti.larg;let size=ti.max,lignes;
   for(;;){ctx.font=P+' '+size+'px Poppins';lignes=couper(texte,largMax);
     if(lignes.length<=ti.lmax||size<=ti.min)break;size-=2;}
   const lh=Math.round(size*ti.lh),yT=T.H-ti.mb-lh*lignes.length+ti.oy;
