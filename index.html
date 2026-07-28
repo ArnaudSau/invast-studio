@@ -268,7 +268,27 @@
         <input type="range" id="edZoom" min="40" max="300" value="100" oninput="setZoom(this.value)">
         <span id="zoomVal">100 %</span>
       </div>
-      <p class="hint">Glisse l'image pour la déplacer · dézoome sous 100 % pour la voir entière</p>
+      <p class="hint">Glisse dans la carte pour déplacer l'élément choisi ci-dessous</p>
+      <div class="seg xs" style="margin-top:12px">
+        <button id="cibImage" class="on" onclick="setCible('image')">Image</button>
+        <button id="cibTexte" onclick="setCible('texte')">Titre</button>
+        <button id="cibPast" onclick="setCible('pastille')">Pastille</button>
+      </div>
+      <div class="zoom-l">
+        <label style="margin:0;min-width:52px">Taille</label>
+        <input type="range" id="txtTaille" min="34" max="80" value="62"
+          oninput="setTaille(this.value)">
+        <span id="tailleVal">62</span>
+      </div>
+      <div class="zoom-l">
+        <label style="margin:0;min-width:52px">Graisse</label>
+        <div class="seg xs" style="flex:1;margin:0">
+          <button id="g500" onclick="setGraisse(500)">Léger</button>
+          <button id="g600" onclick="setGraisse(600)">Demi</button>
+          <button id="g700" class="on" onclick="setGraisse(700)">Gras</button>
+          <button id="g800" onclick="setGraisse(800)">Extra</button>
+        </div>
+      </div>
       <div class="duo" style="margin-top:12px">
         <button class="btn sec mini" style="width:100%" onclick="resetImage()">Recentrer</button>
         <label class="btn sec mini" style="width:100%;cursor:pointer">Uploader
@@ -777,9 +797,33 @@ function envoyerCanvasTelegram(){
 /* ---------- éditeur ---------- */
 const T={W:1080,H:1350,
   handle:{txt:'arnaud_saudrais',size:28,x:57,y:62,ph:28,pv:9},
-  sticker:{txt:'Flash Actu',size:34,ph:18,pv:12,r:10,bg:'#E63A2B'},
-  titre:{max:66,min:46,lh:1.27,mg:75,md:60,mb:90,lmax:5,gap:38},
+  // ox/oy : décalages libres appliqués par l'éditeur
+  sticker:{txt:'Flash Actu',size:34,ph:18,pv:12,r:10,bg:'#E63A2B',ox:0,oy:0},
+  titre:{max:62,min:44,lh:1.27,mg:84,md:72,mb:90,lmax:5,gap:38,
+         poids:700,ox:0,oy:0},
   degrade:{debut:.30,plein:.78}};
+const TITRE_DEF={max:62,min:44,mg:84,md:72,poids:700,ox:0,oy:0};
+let CIBLE='image';                      // ce que le glisser déplace
+function setCible(c){
+  CIBLE=c;
+  [['image','cibImage'],['texte','cibTexte'],['pastille','cibPast']]
+    .forEach(([k,id])=>document.getElementById(id).classList.toggle('on',k===c));
+}
+function setTaille(v){
+  T.titre.max=+v;T.titre.min=Math.min(+v,Math.round(v*0.72));
+  document.getElementById('tailleVal').textContent=v;rendre();
+}
+function setGraisse(p){
+  T.titre.poids=p;
+  [500,600,700,800].forEach(k=>document.getElementById('g'+k).classList.toggle('on',k===p));
+  rendre();
+}
+function resetTexte(){
+  Object.assign(T.titre,TITRE_DEF);T.sticker.ox=0;T.sticker.oy=0;
+  document.getElementById('txtTaille').value=TITRE_DEF.max;
+  document.getElementById('tailleVal').textContent=TITRE_DEF.max;
+  setGraisse(TITRE_DEF.poids);
+}
 let ED={img:null,zoom:1,ox:0,oy:0,base:1,drag:null,actu:null,varte:null};
 let ED_RUN='';
 const cv=document.getElementById('cv'),ctx=cv.getContext('2d',{alpha:false});
@@ -791,6 +835,7 @@ async function ouvrirEditeur(run,actu,v){
   edTitre.value=v.titre;edCaption.value=assurerCTA(v.caption||'');
   edSource.textContent='Image : '+(v.source_image||'—');
   edZoom.value=100;zoomVal.textContent='100 %';
+  setCible('image');resetTexte();          // chaque carte repart des réglages par défaut
   resImgs.innerHTML='';imgHint.textContent='';qImg.value='';
   const srcs=(actu.sources||[]).filter(u=>u).slice(0,2)
     .map(u=>'<a class="src" href="'+u+'" target="_blank" rel="noopener">🔗 '+dom(u)+'</a>').join('');
@@ -885,17 +930,24 @@ function chargerBlob(blob){return new Promise(res=>{
     edZoom.value=100;zoomVal.textContent='100 %';rendre();res()};
   i.src=URL.createObjectURL(blob);});}
 function chargerFichier(inp){if(inp.files[0])chargerBlob(inp.files[0]);}
-function resetImage(){if(!ED.img)return;ED.zoom=1;ED.ox=0;ED.oy=0;
-  edZoom.value=100;zoomVal.textContent='100 %';rendre();}
+/* Recentrer agit sur l'élément sélectionné, pas systématiquement sur l'image */
+function resetImage(){
+  if(CIBLE!=='image'){resetTexte();rendre();return}
+  if(!ED.img)return;
+  ED.zoom=1;ED.ox=0;ED.oy=0;
+  edZoom.value=100;zoomVal.textContent='100 %';rendre();
+}
 function setZoom(v){ED.zoom=v/100;zoomVal.textContent=v+' %';rendre();}
 
 /* déplacement libre (souris + tactile), sans contrainte de bord */
 const scene=document.getElementById('scene');
+const cibleObj=()=>CIBLE==='image'?ED:CIBLE==='texte'?T.titre:T.sticker;
 scene.addEventListener('pointerdown',e=>{e.preventDefault();
-  ED.drag={x:e.clientX,y:e.clientY,ox:ED.ox,oy:ED.oy};scene.setPointerCapture(e.pointerId)});
+  const o=cibleObj();
+  ED.drag={x:e.clientX,y:e.clientY,ox:o.ox,oy:o.oy};scene.setPointerCapture(e.pointerId)});
 scene.addEventListener('pointermove',e=>{if(!ED.drag)return;e.preventDefault();
-  const k=T.W/scene.clientWidth;
-  ED.ox=ED.drag.ox+(e.clientX-ED.drag.x)*k;ED.oy=ED.drag.oy+(e.clientY-ED.drag.y)*k;rendre();});
+  const k=T.W/scene.clientWidth,o=cibleObj();
+  o.ox=ED.drag.ox+(e.clientX-ED.drag.x)*k;o.oy=ED.drag.oy+(e.clientY-ED.drag.y)*k;rendre();});
 ['pointerup','pointercancel','pointerleave'].forEach(ev=>scene.addEventListener(ev,()=>ED.drag=null));
 
 function rendre(){
@@ -913,17 +965,19 @@ function rendre(){
   const tw=ctx.measureText(hd.txt).width,pw=tw+2*hd.ph,ph=hd.size+2*hd.pv;
   rr(hd.x,hd.y,pw,ph,ph/2);ctx.fillStyle='#fff';ctx.fill();
   ctx.fillStyle='#000';ctx.fillText(hd.txt,hd.x+hd.ph,hd.y+ph/2+2);
-  const ti=T.titre,texte=edTitre.value.trim();
+  const ti=T.titre,texte=edTitre.value.trim(),P=ti.poids;
+  const xT=ti.mg+ti.ox;                       // décalages libres de l'éditeur
   const largMax=T.W-ti.mg-ti.md;let size=ti.max,lignes;
-  for(;;){ctx.font='800 '+size+'px Poppins';lignes=couper(texte,largMax);
+  for(;;){ctx.font=P+' '+size+'px Poppins';lignes=couper(texte,largMax);
     if(lignes.length<=ti.lmax||size<=ti.min)break;size-=2;}
-  const lh=Math.round(size*ti.lh),yT=T.H-ti.mb-lh*lignes.length;
+  const lh=Math.round(size*ti.lh),yT=T.H-ti.mb-lh*lignes.length+ti.oy;
   const st=T.sticker;ctx.font='800 '+st.size+'px Poppins';
-  const sw=ctx.measureText(st.txt).width+2*st.ph,sh=st.size+2*st.pv,yS=yT-ti.gap-sh;
-  rr(ti.mg,yS,sw,sh,st.r);ctx.fillStyle=st.bg;ctx.fill();
-  ctx.fillStyle='#fff';ctx.fillText(st.txt,ti.mg+st.ph,yS+sh/2+2);
-  ctx.font='800 '+size+'px Poppins';ctx.fillStyle='#fff';
-  lignes.forEach((l,i)=>ctx.fillText(l,ti.mg,yT+i*lh+lh/2+2));
+  const sw=ctx.measureText(st.txt).width+2*st.ph,sh=st.size+2*st.pv;
+  const xS=xT+st.ox,yS=yT-ti.gap-sh+st.oy;
+  rr(xS,yS,sw,sh,st.r);ctx.fillStyle=st.bg;ctx.fill();
+  ctx.fillStyle='#fff';ctx.fillText(st.txt,xS+st.ph,yS+sh/2+2);
+  ctx.font=P+' '+size+'px Poppins';ctx.fillStyle='#fff';
+  lignes.forEach((l,i)=>ctx.fillText(l,xT,yT+i*lh+lh/2+2));
 }
 function couper(txt,max){
   const mots=txt.split(/\s+/),out=[];let cur='';
