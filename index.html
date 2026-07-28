@@ -355,19 +355,23 @@ async function init(){
   const r=await fetch(API,{headers:H()});
   if(!r.ok){toast('Token GitHub refusé');basculerCfg();return}
   panActus.style.display='block';panLancer.style.display='block';panHisto.style.display='block';
-  chargerHistorique();verifierRunEnCours();chargerActus(false);
+  verifierRunEnCours();
+  await chargerHistorique();      // remplit SUJETS_VUS avant le tri des actus
+  chargerActus(false);
 }
 
 /* ---------- actus du jour (100 % gratuit : flux RSS via le proxy, zéro appel Claude) ---------- */
 const CACHE_ACTUS='invast_actus', FRAICHEUR=6*3600*1000;   // rafraîchi tout seul toutes les 6 h
+/* Flux vérifiés un par un : La Tribune, Capital, Boursorama, Le Figaro et
+   Les Échos renvoient du HTML ou un Access Denied, ils sont donc écartés. */
 const RSS_SECOURS=[
   {nom:'BFM Business',url:'https://www.bfmtv.com/rss/economie/'},
-  {nom:'La Tribune',url:'https://www.latribune.fr/rss/rubriques/economie.rss'},
-  {nom:'Capital',url:'https://www.capital.fr/rss'},
-  {nom:'Les Échos',url:'https://services.lesechos.fr/rss/les-echos-finance-marches.xml'},
-  {nom:'Boursorama',url:'https://www.boursorama.com/rss/actualites.xml'},
-  {nom:'Le Figaro Éco',url:'https://www.lefigaro.fr/rss/figaro_economie.xml'},
-  {nom:'France Info Éco',url:'https://www.francetvinfo.fr/economie.rss'}];
+  {nom:'BFM Crypto',url:'https://www.bfmtv.com/rss/crypto/'},
+  {nom:'France Info Éco',url:'https://www.francetvinfo.fr/economie.rss'},
+  {nom:'Le Monde Éco',url:'https://www.lemonde.fr/economie/rss_full.xml'},
+  {nom:'RFI Éco',url:'https://www.rfi.fr/fr/%C3%A9conomie/rss'},
+  {nom:'Challenges',url:'https://www.challenges.fr/rss.xml'},
+  {nom:'Journal du Net',url:'https://www.journaldunet.com/rss/'}];
 /* mêmes critères que la curation du robot, en version locale et gratuite */
 const MOTS=['bourse','action','crypto','bitcoin','ethereum','taux','bce','fed','inflation',
   'livret a','pea','assurance-vie','épargne','epargne','ipo','introduction en bourse','résultats',
@@ -433,7 +437,7 @@ function similaires(a,b){
   let inter=0;A.forEach(m=>{if(B.has(m))inter++});
   return inter/Math.min(A.size,B.size)>=.6;      // sous-ensemble = doublon
 }
-let ACTUS=[];
+let ACTUS=[],SUJETS_VUS=[];   // sujets déjà transformés en posts (via l'historique)
 async function chargerActus(force){
   const zone=document.getElementById('listeActus');
   const cache=JSON.parse(localStorage.getItem(CACHE_ACTUS)||'null');
@@ -444,17 +448,23 @@ async function chargerActus(force){
   // chaque flux renvoie son propre lot : surtout pas d'accumulation dans une
   // variable partagée, l'expression serait évaluée avant l'await et les lots
   // s'écraseraient les uns les autres.
+  // paramètre anti-cache : sans lui le proxy et le CDN du site resservent la
+  // même copie et « Actualiser » ne ramène jamais rien de neuf
+  const bust=Date.now();
   const lots=await Promise.all(flux.map(async f=>{
-    try{return parserFlux(await viaProxyTexte(f.url),f.nom);}catch(e){return []}
+    const u=f.url+(f.url.includes('?')?'&':'?')+'_='+bust;
+    try{return parserFlux(await viaProxyTexte(u),f.nom);}catch(e){return []}
   }));
   const tout=lots.flat();
   const classe=tout.map(a=>({...a,score:scoreActu(a)})).filter(a=>a.score>0)
     .sort((x,y)=>y.score-x.score||y.date-x.date);
-  // on garde les meilleures, sans doublon et sans qu'une seule source monopolise
+  // on garde les meilleures, sans doublon, sans qu'une source monopolise,
+  // et sans reproposer une actu déjà passée en post
   const liste=[],parSource={};
   for(const a of classe){
-    if(liste.length>=5)break;
+    if(liste.length>=8)break;
     if(liste.some(v=>similaires(v.titre,a.titre)))continue;
+    if(SUJETS_VUS.some(s=>similaires(s,a.titre)))continue;
     const s=a.source||dom(a.url);
     if((parSource[s]||0)>=2)continue;
     parSource[s]=(parSource[s]||0)+1;liste.push(a);
@@ -559,9 +569,10 @@ async function chargerHistorique(){
   const r=await fetch(API+'/contents/archive',{headers:H()});
   if(r.status===404){runs.innerHTML='<p class="vide">Aucune archive — lance une génération</p>';return}
   const ds=(await r.json()).filter(d=>d.type==='dir').sort((a,b)=>b.name.localeCompare(a.name));
-  runs.innerHTML='';
+  runs.innerHTML='';SUJETS_VUS=[];
   for(const d of ds){
     try{const m=await (await fetch(API+'/contents/archive/'+d.name+'/manifest.json',{headers:H(true)})).json();
+      (m.actus||[]).forEach(a=>{if(a.sujet)SUJETS_VUS.push(a.sujet)});
       runs.appendChild(blocRun(d.name,m));}catch(e){}
   }
   if(!runs.children.length)runs.innerHTML='<p class="vide">Aucune archive</p>';
