@@ -217,6 +217,12 @@
       <span class="maj"><b id="actusMaj"></b>
         <span class="rech" onclick="chargerActus(true)">↻ Actualiser</span></span>
     </div>
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <input type="text" id="qActu" placeholder="Filtrer ou chercher : Nvidia, Livret A…"
+        oninput="filtrerActus()" onkeydown="if(event.key==='Enter')chercherActuWeb()">
+      <button class="btn mini" style="flex:none" onclick="chercherActuWeb()"
+        title="Chercher cette actu sur le web">🔎</button>
+    </div>
     <div class="seg xs">
       <button id="triRecent" onclick="setTri('recent')">Récentes</button>
       <button id="triHot" onclick="setTri('hot')">🔥 Tendance</button>
@@ -551,13 +557,14 @@ const estCrypto=a=>a.theme==='crypto'||
 /* Pages construites à la file : une actu qui ne rentre pas dans la page
    courante (quota crypto ou source déjà prise) part sur la suivante, elle
    n'est jamais perdue. */
-function paginer(liste){
+function paginer(liste,libre){
   const q=[...liste],pages=[];
   while(q.length){
     const page=[],parSource={};let crypto=0,i=0;
     while(page.length<PAR_PAGE&&i<q.length){
       const a=q[i],c=estCrypto(a),s=a.source||dom(a.url);
-      if((c&&crypto>=1)||(parSource[s]||0)>=2){i++;continue}
+      // sur une recherche ciblée, on veut TOUT voir : pas de quota
+      if(!libre&&((c&&crypto>=1)||(parSource[s]||0)>=2)){i++;continue}
       if(c)crypto++;parSource[s]=(parSource[s]||0)+1;
       page.push(a);q.splice(i,1);
     }
@@ -566,17 +573,26 @@ function paginer(liste){
   }
   return pages;
 }
+let FILTRE='';
+function filtrerActus(){
+  FILTRE=document.getElementById('qActu').value.trim().toLowerCase();
+  PAGE=0;rendreActus();
+}
 function rendreActus(){
   const filtre=[];
   for(const a of [...POOL].sort(TRIS[TRI])){
+    if(FILTRE&&!(a.titre+' '+(a.resume||'')).toLowerCase().includes(FILTRE))continue;
     if(SUJETS_VUS.some(s=>similaires(s,a.titre)))continue;    // déjà passé en post
     if(filtre.some(v=>similaires(v.titre,a.titre)))continue;  // doublon
     filtre.push(a);
   }
-  PAGES=paginer(filtre);
+  PAGES=paginer(filtre,!!FILTRE);
   if(PAGE>=PAGES.length)PAGE=Math.max(0,PAGES.length-1);
   const zone=document.getElementById('listeActus');
-  if(!PAGES.length){zone.innerHTML='<p class="vide">Aucune actu en stock</p>';
+  if(!PAGES.length){
+    zone.innerHTML=FILTRE
+      ?'<p class="vide">Rien en stock pour « '+echap(FILTRE)+' » · appuie sur 🔎 pour chercher sur le web</p>'
+      :'<p class="vide">Aucune actu en stock</p>';
     document.getElementById('pageInfo').textContent='';return}
   afficherActus(PAGES[PAGE]);
   document.getElementById('pageInfo').textContent=
@@ -588,6 +604,28 @@ function pageActus(d){
   const n=PAGE+d;if(n<0||n>=PAGES.length)return;
   PAGE=n;rendreActus();
   document.getElementById('panActus').scrollIntoView({behavior:'smooth',block:'start'});
+}
+/* Recherche ciblée : quand tu sais qu'une boîte va faire l'actu, tu vas la
+   chercher directement au lieu d'attendre qu'elle remonte dans les flux.
+   Bing News en RSS, via le proxy : gratuit, pas d'appel Claude. */
+async function chercherActuWeb(){
+  const q=document.getElementById('qActu').value.trim();
+  if(!q)return toast('Écris un mot-clé');
+  if(!proxyBase())return toast('Configure le proxy dans ⚙');
+  const zone=document.getElementById('listeActus');
+  zone.innerHTML='<p class="vide">Recherche de « '+echap(q)+' » sur le web…</p>';
+  try{
+    const u='https://www.bing.com/news/search?q='+encodeURIComponent(q)
+      +'&format=RSS&setmkt=fr-FR&_='+Date.now();
+    const arts=parserFlux(await viaProxyTexte(u),'')
+      .map(a=>({...a,source:dom(a.url)}))
+      // score plancher : une recherche explicite passe avant le filtre finance
+      .map(a=>({...a,score:Math.max(2,scoreActu(a)),viral:scoreViral(a)}));
+    if(!arts.length){zone.innerHTML='<p class="vide">Aucun résultat</p>';return}
+    const n=fusionner(arts);
+    toast(n?'+ '+n+' résultat'+(n>1?'s':''):'Déjà dans ta liste');
+  }catch(e){toast('Recherche impossible')}
+  PAGE=0;rendreActus();
 }
 function fusionner(nouveaux){
   const connus=new Set(POOL.map(a=>a.url));
