@@ -142,23 +142,35 @@
   .zoom-l span{font-size:12px;color:var(--gris);white-space:nowrap;min-width:44px;text-align:right}
   input[type=range]{flex:1;accent-color:var(--or);height:28px}
   .hint{font-size:11.5px;color:var(--gris2);line-height:1.5}
-  /* --- actus du jour --- */
-  .actuf{padding:13px 0;border-top:1px solid var(--bord)}
+  /* --- actus du jour : une ligne compacte, 5 tiennent dans un écran --- */
+  .actuf{display:flex;gap:10px;align-items:flex-start;
+    padding:9px 0;border-top:1px solid var(--bord)}
   .actuf:first-child{border-top:none;padding-top:2px}
-  .actuf-t{display:block;font-size:14px;font-weight:600;line-height:1.35;color:var(--blanc);
-    text-decoration:none;margin-bottom:6px}
+  .actuf-c{flex:1;min-width:0}
+  .actuf-t{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
+    overflow:hidden;font-size:13px;font-weight:600;line-height:1.32;
+    color:var(--blanc);text-decoration:none}
   .actuf-t:active{color:var(--or)}
-  .pager{display:flex;align-items:center;gap:10px;margin-top:14px}
-  .pager button{width:auto;flex:none}
-  .pager span{font-size:12px;color:var(--gris2);margin:0 auto}
-  .badge{display:inline-block;font-size:9.5px;font-weight:800;letter-spacing:.7px;
-    padding:3px 7px;border-radius:6px;margin-right:7px;position:relative;top:-1px;color:#FFF}
+  .actuf-a{display:flex;gap:5px;flex:none}
+  .actuf-a button{width:33px;height:33px;padding:0;border-radius:9px;cursor:pointer;
+    border:1px solid var(--bord);background:var(--noir);color:var(--gris);font-size:14px}
+  .actuf-a button:active{background:var(--carte2)}
+  .actuf-a .pri{color:var(--or);border-color:var(--or)}
+  body.clair .actuf-a button{background:#FFF}
+  .score{font-weight:700;color:var(--rouge,#E63A2B)}
+  #panActus{padding:14px}
+  @media(min-width:800px){#panActus{padding:20px}}
+  .pager{display:flex;align-items:center;gap:10px;margin-top:10px}
+  .pager button{width:auto;flex:none;padding:8px 13px;font-size:12.5px}
+  .pager span{font-size:11px;color:var(--gris2);margin:0 auto}
+  .badge{display:inline-block;font-size:9px;font-weight:800;letter-spacing:.6px;
+    padding:2px 6px;border-radius:5px;margin-right:6px;position:relative;top:-1px;color:#FFF}
   .badge.neuf{background:var(--bleu-badge,#2280F5)}
   .badge.chaud{background:#E63A2B}
-  .actuf-m{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:9px}
-  .actuf-m span{font-size:11.5px;color:var(--gris2)}
+  .actuf-m{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:3px}
+  .actuf-m span{font-size:10.5px;color:var(--gris2)}
   .actuf-m .pastille{color:var(--bleu);background:rgba(143,198,242,.09);
-    border-radius:20px;padding:3px 10px}
+    border-radius:20px;padding:2px 8px}
   .maj{margin-left:auto;display:flex;align-items:center;gap:12px;text-transform:none;
     letter-spacing:0;font-weight:500;color:var(--gris2)}
   .maj b{font-weight:500}
@@ -224,9 +236,10 @@
         title="Chercher cette actu sur le web">🔎</button>
     </div>
     <div class="seg xs">
-      <button id="triRecent" onclick="setTri('recent')">Récentes</button>
-      <button id="triHot" onclick="setTri('hot')">🔥 Tendance</button>
-      <button id="triMix" class="on" onclick="setTri('mix')">Mélange</button>
+      <button id="vueHot" class="on" onclick="setVue('hot')">🔥 Tendance</button>
+      <button id="vueRecent" onclick="setVue('recent')">Récentes</button>
+      <button id="vueAttente" onclick="setVue('attente')">⏳ Attente</button>
+      <button id="vueMasquees" onclick="setVue('masquees')">🗑 Masquées</button>
     </div>
     <div id="listeActus"><p class="vide">Chargement…</p></div>
     <div class="pager">
@@ -540,18 +553,46 @@ let ACTUS=[],SUJETS_VUS=[];   // sujets déjà transformés en posts (via l'hist
    « Actualiser » n'échange plus la sélection : il va chercher les flux et
    AJOUTE au stock les articles qu'on n'avait pas encore. */
 const CLE_POOL='invast_pool', RETENTION=3*24*3600*1000, PAR_PAGE=5;
-let POOL=[], TRI='mix', PAGE=0, PAGES=[];
+let POOL=[], VUE='hot', PAGE=0, PAGES=[];
 const TRIS={
   recent:(x,y)=>(y.date||0)-(x.date||0),
-  hot:(x,y)=>y.viral-x.viral||(y.date||0)-(x.date||0),
-  mix:(x,y)=>(y.viral+y.score)-(x.viral+x.score)||(y.date||0)-(x.date||0)
+  hot:(x,y)=>chaud(y)-chaud(x)||(y.date||0)-(x.date||0)
 };
-function setTri(t){
-  TRI=t;PAGE=0;
-  ['recent','hot','mix'].forEach(k=>
-    document.getElementById('tri'+k[0].toUpperCase()+k.slice(1)).classList.toggle('on',k===t));
+function setVue(v){
+  VUE=v;PAGE=0;
+  ['hot','recent','attente','masquees'].forEach(k=>
+    document.getElementById('vue'+k[0].toUpperCase()+k.slice(1)).classList.toggle('on',k===v));
   rendreActus();
 }
+
+/* ---------- mémoire de veille : ce que j'ai écarté, mis de côté, publié ----------
+   Chaque marqueur nourrit aussi l'apprentissage du score « chaud ». */
+const CLE_MARQUES='invast_marques', CLE_APPRIS='invast_appris';
+let MARQUES=JSON.parse(localStorage.getItem(CLE_MARQUES)||'{}');
+let APPRIS=JSON.parse(localStorage.getItem(CLE_APPRIS)||'{}');
+const POIDS={generee:1.5,attente:.6,masquee:-1};   // signal envoyé par chaque geste
+function marquer(url,etat,titre){
+  if(etat)MARQUES[url]={etat,t:Date.now(),titre:titre||(MARQUES[url]||{}).titre||''};
+  else delete MARQUES[url];
+  localStorage.setItem(CLE_MARQUES,JSON.stringify(MARQUES));
+  apprendre();rendreActus();
+}
+function apprendre(){
+  const w={};
+  Object.values(MARQUES).forEach(m=>{
+    const p=POIDS[m.etat];if(!p||!m.titre)return;
+    motsCles(m.titre).forEach(mot=>{w[mot]=(w[mot]||0)+p});
+  });
+  APPRIS=w;localStorage.setItem(CLE_APPRIS,JSON.stringify(w));
+}
+/* score affiché = algo de base + ce qu'il a appris de mes choix (plafonné,
+   pour qu'un mot revu souvent ne fasse pas exploser le classement) */
+function chaud(a){
+  if(!a.viral)return 0;                       // éliminé d'office (pédagogique…)
+  let bonus=0;motsCles(a.titre).forEach(m=>{bonus+=APPRIS[m]||0});
+  return Math.max(0,Math.round(a.viral+Math.max(-4,Math.min(4,bonus))));
+}
+const etatDe=a=>(MARQUES[a.url]||{}).etat||'';
 const estCrypto=a=>a.theme==='crypto'||
   /\b(crypto|bitcoin|btc|ethereum|altcoin|stablecoin|blockchain|nft|token)\b/i.test(a.titre);
 /* Pages construites à la file : une actu qui ne rentre pas dans la page
@@ -579,21 +620,31 @@ function filtrerActus(){
   PAGE=0;rendreActus();
 }
 function rendreActus(){
+  const liste=VUE==='hot'||VUE==='recent';
+  const tri=TRIS[VUE==='recent'?'recent':'hot'];
   const filtre=[];
-  for(const a of [...POOL].sort(TRIS[TRI])){
+  for(const a of [...POOL].sort(tri)){
+    const e=etatDe(a);
+    if(liste&&e)continue;                                     // écartée ou en attente
+    if(VUE==='attente'&&e!=='attente')continue;
+    if(VUE==='masquees'&&e!=='masquee')continue;
     if(FILTRE&&!(a.titre+' '+(a.resume||'')).toLowerCase().includes(FILTRE))continue;
-    if(SUJETS_VUS.some(s=>similaires(s,a.titre)))continue;    // déjà passé en post
-    if(filtre.some(v=>similaires(v.titre,a.titre)))continue;  // doublon
+    if(liste&&SUJETS_VUS.some(s=>similaires(s,a.titre)))continue;  // déjà passé en post
+    if(filtre.some(v=>similaires(v.titre,a.titre)))continue;       // doublon
     filtre.push(a);
   }
-  PAGES=paginer(filtre,!!FILTRE);
+  PAGES=paginer(filtre,!!FILTRE||!liste);
   if(PAGE>=PAGES.length)PAGE=Math.max(0,PAGES.length-1);
   const zone=document.getElementById('listeActus');
   if(!PAGES.length){
     zone.innerHTML=FILTRE
       ?'<p class="vide">Rien en stock pour « '+echap(FILTRE)+' » · appuie sur 🔎 pour chercher sur le web</p>'
+      :VUE==='attente'?'<p class="vide">Aucune actu mise de côté</p>'
+      :VUE==='masquees'?'<p class="vide">Aucune actu masquée</p>'
       :'<p class="vide">Aucune actu en stock</p>';
-    document.getElementById('pageInfo').textContent='';return}
+    document.getElementById('pageInfo').textContent='';
+    document.getElementById('pagePrec').disabled=true;
+    document.getElementById('pageSuiv').disabled=true;return}
   afficherActus(PAGES[PAGE]);
   document.getElementById('pageInfo').textContent=
     'page '+(PAGE+1)+' / '+PAGES.length+' · '+filtre.length+' actus';
@@ -685,23 +736,32 @@ function afficherActus(liste){
   liste.forEach((a,i)=>{
     const d=document.createElement('div');d.className='actuf';
     const neuf=a.date&&(Date.now()-a.date)/3600000<4;
-    const chaud=(a.viral||0)>=8;
-    d.innerHTML='<a class="actuf-t" href="'+a.url+'" target="_blank" rel="noopener">'
+    const sc=chaud(a),e=etatDe(a);
+    d.innerHTML='<div class="actuf-c">'
+      +'<a class="actuf-t" href="'+a.url+'" target="_blank" rel="noopener">'
       +(neuf?'<span class="badge neuf">NEW</span>':'')
-      +(chaud?'<span class="badge chaud">HOT</span>':'')
+      +(sc>=8?'<span class="badge chaud">HOT '+sc+'</span>':'')
       +echap(a.titre)+'</a>'
       +'<div class="actuf-m"><span class="pastille">'+echap(a.source||dom(a.url))+'</span>'
-      +'<span>'+ilYA(a.date)+'</span></div>';
-    const b=document.createElement('button');
-    b.className='btn sec mini';b.textContent='✨ Créer un visuel';
-    b.onclick=()=>creerDepuisActu(i);
-    d.appendChild(b);z.appendChild(d);
+      +'<span>'+ilYA(a.date)+'</span>'
+      +(sc<8?'<span class="score">🔥 '+sc+'</span>':'')+'</div></div>';
+    const act=document.createElement('div');act.className='actuf-a';
+    const bt=(txt,titre,cls,fn)=>{const b=document.createElement('button');
+      b.textContent=txt;b.title=titre;if(cls)b.className=cls;b.onclick=fn;act.appendChild(b)};
+    bt('✨','Créer un visuel','pri',()=>creerDepuisActu(i));
+    if(e){bt('↩','Remettre dans la liste','',()=>marquer(a.url,null))}
+    else{
+      bt('⏳','Mettre de côté','',()=>marquer(a.url,'attente',a.titre));
+      bt('✕','Masquer','',()=>marquer(a.url,'masquee',a.titre));
+    }
+    d.appendChild(act);z.appendChild(d);
   });
 }
 /* Prépare le sujet et remonte au bloc Générer : le lancement (qui consomme
    des crédits) reste un geste volontaire, un clic sur « Lancer ». */
 function creerDepuisActu(i){
   const a=ACTUS[i];if(!a)return;
+  marquer(a.url,'generee',a.titre);      // signal fort pour l'apprentissage
   setMode('sujet');
   document.getElementById('sujet').value=
     a.titre+(a.resume?'\n\n'+a.resume:'')+'\n\nSource : '+a.url;
