@@ -214,6 +214,10 @@
       <span class="maj"><b id="actusMaj"></b>
         <span class="rech" onclick="chargerActus(true)">↻ Actualiser</span></span>
     </div>
+    <div class="seg">
+      <button id="ongHot" class="on" onclick="setOnglet('hot')">🔥 3 HOT</button>
+      <button id="ongCinq" onclick="setOnglet('cinq')">5 actus</button>
+    </div>
     <div id="listeActus"><p class="vide">Chargement…</p></div>
   </div>
 
@@ -372,15 +376,15 @@ const CACHE_ACTUS='invast_actus', FRAICHEUR=6*3600*1000;   // rafraîchi tout se
    son nouveau flux Prisma, trouvé par auto-découverte sur la page d'accueil. */
 const RSS_SECOURS=[
   {nom:'BFM Business',url:'https://www.bfmtv.com/rss/economie/'},
-  {nom:'BFM Crypto',url:'https://www.bfmtv.com/rss/crypto/'},
+  {nom:'BFM Crypto',url:'https://www.bfmtv.com/rss/crypto/',theme:'crypto'},
   {nom:'France Info Éco',url:'https://www.francetvinfo.fr/economie.rss'},
   {nom:'Le Monde Éco',url:'https://www.lemonde.fr/economie/rss_full.xml'},
   {nom:'RFI Éco',url:'https://www.rfi.fr/fr/%C3%A9conomie/rss'},
   {nom:'Challenges',url:'https://www.challenges.fr/rss.xml'},
   {nom:'Journal du Net',url:'https://www.journaldunet.com/rss/'},
   {nom:'Capital',url:'https://feed.prismamediadigital.com/v1/cap/rss?limit=20'},
-  {nom:'Cryptoast',url:'https://cryptoast.fr/feed/'},
-  {nom:'Journal du Coin',url:'https://journalducoin.com/feed/'},
+  {nom:'Cryptoast',url:'https://cryptoast.fr/feed/',theme:'crypto'},
+  {nom:'Journal du Coin',url:'https://journalducoin.com/feed/',theme:'crypto'},
   {nom:'Usine Nouvelle',url:'https://www.usinenouvelle.com/rss'}];
 /* mêmes critères que la curation du robot, en version locale et gratuite */
 const MOTS=['bourse','action','crypto','bitcoin','ethereum','taux','bce','fed','inflation',
@@ -425,24 +429,42 @@ function parserFlux(xml,nom){
       source:nom};
   }).filter(a=>a.titre&&/^https?:/.test(a.url));
 }
-/* Potentiel de viralité : ce qui surprend, ce qui touche le portefeuille de
-   tout le monde, et les marques que l'audience reconnaît sans réfléchir. */
+/* Potentiel de viralité. Une accroche qui marche sur Insta, c'est un ÉVÉNEMENT
+   daté + un chiffre + un nom que tout le monde reconnaît. Un article
+   pédagogique ("Qu'est-ce que le long squeeze ?") n'est jamais viral : il est
+   éliminé d'entrée, c'est ce qui faisait remonter des tutos en HOT. */
+const PEDAGO=["qu'est-ce que",'quest-ce que',"c'est quoi",'comment ','pourquoi ','faut-il',
+  'guide','tutoriel','la minute','on vous explique','décryptage','tout savoir','notre avis',
+  'top 5','top 10','meilleurs','meilleures','conseils','astuces','définition','comprendre',
+  'dossier',' avis ','что','peut-on','doit-on','notre sélection','comparatif'];
+const EVENEMENT=['annonce','dévoile','dépasse','franchit','atteint','chute','plonge',
+  "s'effondre","s'envole",'bondit','rachète','rachat','lance','supprime','ferme','condamn',
+  'inflige','licencie','augmente','baisse','interdit','saisit','porte plainte','dépose',
+  'valorisé','signe','conclut','vend','acquiert','démissionne','nomme','reporte','suspend'];
 const VIRAL=[['record',3],['historique',3],['première fois',3],['inédit',2],['jamais vu',3],
   ["s'effondre",3],['effondrement',3],['chute',2],['plonge',2],['dégringole',2],['flambée',3],
   ['explose',3],["s'envole",3],['bondit',2],['faillite',3],['licenciement',3],['fermeture',2],
-  ['interdit',2],['banni',2],['procès',2],['fraude',3],['arnaque',3],['scandale',3],['amende',2],
+  ['interdit',2],['banni',2],['procès',2],['fraude',3],['arnaque',3],['scandale',3],['amende',3],
   ['impôt',3],['salaire',3],['retraite',3],['livret a',3],["pouvoir d'achat",3],['facture',2],
   ['essence',2],['carburant',2],['loyer',2],['immobilier',2],['smic',3],['taxe',3],['prime',2],
-  ['remboursement',2],['augmentation',2],['prix',1],['épargne',2],['crypto',1],['bitcoin',2]];
+  ['remboursement',2],['augmentation',2],['épargne',2]];
 function scoreViral(a){
-  const t=(a.titre+' '+a.resume).toLowerCase();
+  const titre=(a.titre||'').trim(), t=(titre+' '+a.resume).toLowerCase();
+  // 1. éliminatoire : pédagogique / intemporel, ce n'est pas une actu
+  if(PEDAGO.some(m=>t.includes(m)))return 0;
+  // 2. il faut un ancrage factuel : un chiffre OU un nom connu
+  const chiffre=/\d/.test(titre);
+  const marque=BOITES.some(m=>t.includes(m));
+  if(!chiffre&&!marque)return 0;
+  // 3. il faut qu'il se passe quelque chose
+  if(!EVENEMENT.some(m=>t.includes(m))&&!/\b\d{2,3}\s*%/.test(t)
+     &&!/\d[\d  .,]*\s*(milliards?|md)/.test(t))return 0;
   let s=0;
   VIRAL.forEach(([m,p])=>{if(t.includes(m))s+=p});
-  if(BOITES.some(m=>t.includes(m)))s+=3;                  // marque connue de tous
+  if(marque)s+=3;                                         // nom connu de tous
   if(/\d[\d  .,]*\s*(milliards?|md)/.test(t))s+=3;        // montant vertigineux
   else if(/\d[\d  .,]*\s*millions?/.test(t))s+=1;
   if(/\b\d{2,3}\s*%/.test(t))s+=2;                        // gros pourcentage
-  if(a.titre.trim().endsWith('?'))s+=1;                   // question = curiosité
   if(a.date&&(Date.now()-a.date)/3600000<12)s+=1;
   return s;
 }
@@ -473,16 +495,38 @@ function similaires(a,b){
   return inter>=3 && inter/(A.size+B.size-inter)>=.45;
 }
 let ACTUS=[],SUJETS_VUS=[];   // sujets déjà transformés en posts (via l'historique)
-const DEJA_VUES=new Set();     // actus déjà montrées pendant la session
-function selection(classe,exclues){
-  const liste=[],parSource={};
+/* Deux onglets indépendants : chacun sa sélection, son cache, ses actus déjà
+   vues. « 3 HOT » classe par potentiel viral, « 5 actus » par pertinence. */
+const ONGLETS={
+  hot: {cle:'invast_hot', n:3, quotaCrypto:1, parSourceMax:1,
+        garde:a=>a.viral>=8, tri:(x,y)=>y.viral-x.viral||y.date-x.date,
+        vide:'Rien de vraiment chaud pour l\'instant', vus:new Set()},
+  cinq:{cle:'invast_cinq',n:5, quotaCrypto:1, parSourceMax:2,
+        garde:a=>a.score>0,  tri:(x,y)=>y.score-x.score||y.date-x.date,
+        vide:'Rien de marquant pour l\'instant', vus:new Set()}
+};
+let ONGLET='hot';
+function setOnglet(o){
+  ONGLET=o;
+  document.getElementById('ongHot').classList.toggle('on',o==='hot');
+  document.getElementById('ongCinq').classList.toggle('on',o==='cinq');
+  chargerActus(false);
+}
+const estCrypto=a=>a.theme==='crypto'||
+  /\b(crypto|bitcoin|btc|ethereum|altcoin|stablecoin|blockchain|nft|token)\b/i.test(a.titre);
+function selection(classe,cfg,exclues){
+  const liste=[],parSource={};let crypto=0;
   for(const a of classe){
-    if(liste.length>=8)break;
+    if(liste.length>=cfg.n)break;
     if(exclues.has(a.url))continue;
     if(liste.some(v=>similaires(v.titre,a.titre)))continue;
     if(SUJETS_VUS.some(s=>similaires(s,a.titre)))continue;   // déjà passé en post
+    if(estCrypto(a)){                                        // la crypto ne doit
+      if(crypto>=cfg.quotaCrypto)continue;                   // pas tout manger
+      crypto++;
+    }
     const s=a.source||dom(a.url);
-    if((parSource[s]||0)>=2)continue;                        // pas de monopole
+    if((parSource[s]||0)>=cfg.parSourceMax)continue;         // pas de monopole
     parSource[s]=(parSource[s]||0)+1;liste.push(a);
   }
   return liste;
@@ -494,8 +538,8 @@ async function chargerActus(force){
   try{await _chargerActus(force)}finally{CHARGE_ACTUS=false}
 }
 async function _chargerActus(force){
-  const zone=document.getElementById('listeActus');
-  const cache=JSON.parse(localStorage.getItem(CACHE_ACTUS)||'null');
+  const cfg=ONGLETS[ONGLET],zone=document.getElementById('listeActus');
+  const cache=JSON.parse(localStorage.getItem(cfg.cle)||'null');
   if(cache&&!force&&Date.now()-cache.t<FRAICHEUR)return afficherActus(cache.liste,cache.t);
   if(!proxyBase()){zone.innerHTML='<p class="vide">Configure l\'URL du proxy dans ⚙</p>';return}
   zone.innerHTML='<p class="vide">Recherche des actus…</p>';
@@ -508,19 +552,20 @@ async function _chargerActus(force){
   const bust=Date.now();
   const lots=await Promise.all(flux.map(async f=>{
     const u=f.url+(f.url.includes('?')?'&':'?')+'_='+bust;
-    try{return parserFlux(await viaProxyTexte(u),f.nom);}catch(e){return []}
+    try{return parserFlux(await viaProxyTexte(u),f.nom).map(a=>({...a,theme:f.theme}));}
+    catch(e){return []}
   }));
-  const tout=lots.flat();
-  const classe=tout.map(a=>({...a,score:scoreActu(a),viral:scoreViral(a)}))
-    .filter(a=>a.score>0).sort((x,y)=>y.score-x.score||y.date-x.date);
+  const classe=lots.flat().map(a=>({...a,score:scoreActu(a),viral:scoreViral(a)}))
+    .filter(a=>a.score>0).filter(cfg.garde).sort(cfg.tri);
   // Actualiser doit vraiment changer quelque chose : les flux ne bougent que
   // toutes les quelques heures, donc un clic manuel montre la SUITE du
   // classement plutôt que de réafficher les mêmes têtes de liste.
-  let liste=selection(classe,force?DEJA_VUES:new Set());
-  if(force&&liste.length<4){DEJA_VUES.clear();liste=selection(classe,DEJA_VUES);}
-  liste.forEach(a=>DEJA_VUES.add(a.url));
-  if(!liste.length){zone.innerHTML='<p class="vide">Rien de marquant pour l\'instant</p>';return}
-  localStorage.setItem(CACHE_ACTUS,JSON.stringify({t:Date.now(),liste}));
+  let liste=selection(classe,cfg,force?cfg.vus:new Set());
+  if(force&&liste.length<cfg.n){cfg.vus.clear();liste=selection(classe,cfg,cfg.vus);}
+  liste.forEach(a=>cfg.vus.add(a.url));
+  if(!liste.length){zone.innerHTML='<p class="vide">'+cfg.vide+'</p>';
+    document.getElementById('actusMaj').textContent='';return}
+  localStorage.setItem(cfg.cle,JSON.stringify({t:Date.now(),liste}));
   afficherActus(liste,Date.now());
 }
 function ilYA(ms){
