@@ -148,6 +148,9 @@
   .actuf-t{display:block;font-size:14px;font-weight:600;line-height:1.35;color:var(--blanc);
     text-decoration:none;margin-bottom:6px}
   .actuf-t:active{color:var(--or)}
+  .pager{display:flex;align-items:center;gap:10px;margin-top:14px}
+  .pager button{width:auto;flex:none}
+  .pager span{font-size:12px;color:var(--gris2);margin:0 auto}
   .badge{display:inline-block;font-size:9.5px;font-weight:800;letter-spacing:.7px;
     padding:3px 7px;border-radius:6px;margin-right:7px;position:relative;top:-1px;color:#FFF}
   .badge.neuf{background:var(--bleu-badge,#2280F5)}
@@ -214,11 +217,17 @@
       <span class="maj"><b id="actusMaj"></b>
         <span class="rech" onclick="chargerActus(true)">↻ Actualiser</span></span>
     </div>
-    <div class="seg">
-      <button id="ongHot" class="on" onclick="setOnglet('hot')">🔥 3 HOT</button>
-      <button id="ongCinq" onclick="setOnglet('cinq')">5 actus</button>
+    <div class="seg xs">
+      <button id="triRecent" onclick="setTri('recent')">Récentes</button>
+      <button id="triHot" onclick="setTri('hot')">🔥 Tendance</button>
+      <button id="triMix" class="on" onclick="setTri('mix')">Mélange</button>
     </div>
     <div id="listeActus"><p class="vide">Chargement…</p></div>
+    <div class="pager">
+      <button class="btn sec mini" id="pagePrec" onclick="pageActus(-1)">‹ Précédent</button>
+      <span id="pageInfo"></span>
+      <button class="btn sec mini" id="pageSuiv" onclick="pageActus(1)">Suivant ›</button>
+    </div>
   </div>
 
   <!-- LANCER -->
@@ -369,7 +378,7 @@ async function init(){
 }
 
 /* ---------- actus du jour (100 % gratuit : flux RSS via le proxy, zéro appel Claude) ---------- */
-const CACHE_ACTUS='invast_actus', FRAICHEUR=6*3600*1000;   // rafraîchi tout seul toutes les 6 h
+const FRAICHEUR=6*3600*1000;   // rafraîchi tout seul toutes les 6 h
 /* Flux testés un par un. Boursorama, La Tribune, Le Figaro et Les Échos n'ont
    plus de flux public accessible (page HTML ou Access Denied côté Akamai) :
    impossible de les réparer depuis le navigateur. Capital a été récupéré via
@@ -495,41 +504,74 @@ function similaires(a,b){
   return inter>=3 && inter/(A.size+B.size-inter)>=.45;
 }
 let ACTUS=[],SUJETS_VUS=[];   // sujets déjà transformés en posts (via l'historique)
-/* Deux onglets indépendants : chacun sa sélection, son cache, ses actus déjà
-   vues. « 3 HOT » classe par potentiel viral, « 5 actus » par pertinence. */
-const ONGLETS={
-  hot: {cle:'invast_hot', n:3, quotaCrypto:1, parSourceMax:1,
-        garde:a=>a.viral>=8, tri:(x,y)=>y.viral-x.viral||y.date-x.date,
-        vide:'Rien de vraiment chaud pour l\'instant', vus:new Set()},
-  cinq:{cle:'invast_cinq',n:5, quotaCrypto:1, parSourceMax:2,
-        garde:a=>a.score>0,  tri:(x,y)=>y.score-x.score||y.date-x.date,
-        vide:'Rien de marquant pour l\'instant', vus:new Set()}
+/* Un seul stock d'actus (POOL), trois tris, une pagination 5 par 5.
+   « Actualiser » n'échange plus la sélection : il va chercher les flux et
+   AJOUTE au stock les articles qu'on n'avait pas encore. */
+const CLE_POOL='invast_pool', RETENTION=3*24*3600*1000, PAR_PAGE=5;
+let POOL=[], TRI='mix', PAGE=0, PAGES=[];
+const TRIS={
+  recent:(x,y)=>(y.date||0)-(x.date||0),
+  hot:(x,y)=>y.viral-x.viral||(y.date||0)-(x.date||0),
+  mix:(x,y)=>(y.viral+y.score)-(x.viral+x.score)||(y.date||0)-(x.date||0)
 };
-let ONGLET='hot';
-function setOnglet(o){
-  ONGLET=o;
-  document.getElementById('ongHot').classList.toggle('on',o==='hot');
-  document.getElementById('ongCinq').classList.toggle('on',o==='cinq');
-  chargerActus(false);
+function setTri(t){
+  TRI=t;PAGE=0;
+  ['recent','hot','mix'].forEach(k=>
+    document.getElementById('tri'+k[0].toUpperCase()+k.slice(1)).classList.toggle('on',k===t));
+  rendreActus();
 }
 const estCrypto=a=>a.theme==='crypto'||
   /\b(crypto|bitcoin|btc|ethereum|altcoin|stablecoin|blockchain|nft|token)\b/i.test(a.titre);
-function selection(classe,cfg,exclues){
-  const liste=[],parSource={};let crypto=0;
-  for(const a of classe){
-    if(liste.length>=cfg.n)break;
-    if(exclues.has(a.url))continue;
-    if(liste.some(v=>similaires(v.titre,a.titre)))continue;
-    if(SUJETS_VUS.some(s=>similaires(s,a.titre)))continue;   // déjà passé en post
-    if(estCrypto(a)){                                        // la crypto ne doit
-      if(crypto>=cfg.quotaCrypto)continue;                   // pas tout manger
-      crypto++;
+/* Pages construites à la file : une actu qui ne rentre pas dans la page
+   courante (quota crypto ou source déjà prise) part sur la suivante, elle
+   n'est jamais perdue. */
+function paginer(liste){
+  const q=[...liste],pages=[];
+  while(q.length){
+    const page=[],parSource={};let crypto=0,i=0;
+    while(page.length<PAR_PAGE&&i<q.length){
+      const a=q[i],c=estCrypto(a),s=a.source||dom(a.url);
+      if((c&&crypto>=1)||(parSource[s]||0)>=2){i++;continue}
+      if(c)crypto++;parSource[s]=(parSource[s]||0)+1;
+      page.push(a);q.splice(i,1);
     }
-    const s=a.source||dom(a.url);
-    if((parSource[s]||0)>=cfg.parSourceMax)continue;         // pas de monopole
-    parSource[s]=(parSource[s]||0)+1;liste.push(a);
+    if(!page.length){pages.push(q.splice(0,PAR_PAGE));continue}
+    pages.push(page);
   }
-  return liste;
+  return pages;
+}
+function rendreActus(){
+  const filtre=[];
+  for(const a of [...POOL].sort(TRIS[TRI])){
+    if(SUJETS_VUS.some(s=>similaires(s,a.titre)))continue;    // déjà passé en post
+    if(filtre.some(v=>similaires(v.titre,a.titre)))continue;  // doublon
+    filtre.push(a);
+  }
+  PAGES=paginer(filtre);
+  if(PAGE>=PAGES.length)PAGE=Math.max(0,PAGES.length-1);
+  const zone=document.getElementById('listeActus');
+  if(!PAGES.length){zone.innerHTML='<p class="vide">Aucune actu en stock</p>';
+    document.getElementById('pageInfo').textContent='';return}
+  afficherActus(PAGES[PAGE]);
+  document.getElementById('pageInfo').textContent=
+    'page '+(PAGE+1)+' / '+PAGES.length+' · '+filtre.length+' actus';
+  document.getElementById('pagePrec').disabled=PAGE===0;
+  document.getElementById('pageSuiv').disabled=PAGE>=PAGES.length-1;
+}
+function pageActus(d){
+  const n=PAGE+d;if(n<0||n>=PAGES.length)return;
+  PAGE=n;rendreActus();
+  document.getElementById('panActus').scrollIntoView({behavior:'smooth',block:'start'});
+}
+function fusionner(nouveaux){
+  const connus=new Set(POOL.map(a=>a.url));
+  const ajouts=nouveaux.filter(a=>!connus.has(a.url)
+    &&!POOL.some(v=>similaires(v.titre,a.titre)));
+  POOL=POOL.concat(ajouts)
+    .filter(a=>!a.date||Date.now()-a.date<RETENTION)   // on oublie au-delà de 3 j
+    .slice(0,300);
+  localStorage.setItem(CLE_POOL,JSON.stringify({t:Date.now(),pool:POOL}));
+  return ajouts.length;
 }
 let CHARGE_ACTUS=false;
 async function chargerActus(force){
@@ -538,11 +580,13 @@ async function chargerActus(force){
   try{await _chargerActus(force)}finally{CHARGE_ACTUS=false}
 }
 async function _chargerActus(force){
-  const cfg=ONGLETS[ONGLET],zone=document.getElementById('listeActus');
-  const cache=JSON.parse(localStorage.getItem(cfg.cle)||'null');
-  if(cache&&!force&&Date.now()-cache.t<FRAICHEUR)return afficherActus(cache.liste,cache.t);
+  const zone=document.getElementById('listeActus');
+  const cache=JSON.parse(localStorage.getItem(CLE_POOL)||'null');
+  if(cache&&cache.pool){POOL=cache.pool;rendreActus();
+    document.getElementById('actusMaj').textContent='maj '+ilYA(cache.t);
+    if(!force&&Date.now()-cache.t<FRAICHEUR)return;}
   if(!proxyBase()){zone.innerHTML='<p class="vide">Configure l\'URL du proxy dans ⚙</p>';return}
-  zone.innerHTML='<p class="vide">Recherche des actus…</p>';
+  if(!POOL.length)zone.innerHTML='<p class="vide">Recherche des actus…</p>';
   const flux=await fluxRss();
   // chaque flux renvoie son propre lot : surtout pas d'accumulation dans une
   // variable partagée, l'expression serait évaluée avant l'await et les lots
@@ -556,31 +600,24 @@ async function _chargerActus(force){
     catch(e){return []}
   }));
   const classe=lots.flat().map(a=>({...a,score:scoreActu(a),viral:scoreViral(a)}))
-    .filter(a=>a.score>0).filter(cfg.garde).sort(cfg.tri);
-  // Actualiser doit vraiment changer quelque chose : les flux ne bougent que
-  // toutes les quelques heures, donc un clic manuel montre la SUITE du
-  // classement plutôt que de réafficher les mêmes têtes de liste.
-  let liste=selection(classe,cfg,force?cfg.vus:new Set());
-  if(force&&liste.length<cfg.n){cfg.vus.clear();liste=selection(classe,cfg,cfg.vus);}
-  liste.forEach(a=>cfg.vus.add(a.url));
-  if(!liste.length){zone.innerHTML='<p class="vide">'+cfg.vide+'</p>';
-    document.getElementById('actusMaj').textContent='';return}
-  localStorage.setItem(cfg.cle,JSON.stringify({t:Date.now(),liste}));
-  afficherActus(liste,Date.now());
+    .filter(a=>a.score>0);
+  const n=fusionner(classe);
+  document.getElementById('actusMaj').textContent='maj à l\'instant';
+  rendreActus();
+  if(force)toast(n?'+ '+n+' nouvelle'+(n>1?'s':'')+' actu'+(n>1?'s':''):'Rien de nouveau');
 }
 function ilYA(ms){
   if(!ms)return '';
   const h=Math.round((Date.now()-ms)/3600000);
   return h<1?'à l\'instant':h<24?'il y a '+h+' h':'il y a '+Math.round(h/24)+' j';
 }
-function afficherActus(liste,t){
+function afficherActus(liste){
   ACTUS=liste;
-  document.getElementById('actusMaj').textContent='maj '+ilYA(t);
   const z=document.getElementById('listeActus');z.innerHTML='';
   liste.forEach((a,i)=>{
     const d=document.createElement('div');d.className='actuf';
     const neuf=a.date&&(Date.now()-a.date)/3600000<4;
-    const chaud=(a.viral||0)>=7;
+    const chaud=(a.viral||0)>=8;
     d.innerHTML='<a class="actuf-t" href="'+a.url+'" target="_blank" rel="noopener">'
       +(neuf?'<span class="badge neuf">NEW</span>':'')
       +(chaud?'<span class="badge chaud">HOT</span>':'')
