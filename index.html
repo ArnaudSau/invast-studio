@@ -381,7 +381,8 @@ const MOTS=['bourse','action','crypto','bitcoin','ethereum','taux','bce','fed','
 const BOITES=['apple','nvidia','tesla','spacex','meta','amazon','google','microsoft','openai',
   'anthropic','lvmh','totalenergies','bnp','société générale','carrefour','renault','stellantis',
   'airbus','orange','edf','netflix','samsung','binance','coinbase','hermès','l\'oréal'];
-const HORS=['football','ligue 1','rugby','tennis','météo','horoscope','people','cinéma','série tv'];
+const HORS=['football','ligue 1','rugby','tennis','météo','horoscope','people','cinéma',
+  'série tv','coupe du monde','les bleus','audiences tv','jeux olympiques','festival'];
 
 async function fluxRss(){
   try{
@@ -433,9 +434,11 @@ const motsCles=t=>new Set(t.toLowerCase().replace(/[^a-zà-ÿ0-9 ]/g,' ').split(
   .filter(m=>m.length>3&&!VIDES.has(m)));
 function similaires(a,b){
   const A=motsCles(a),B=motsCles(b);
-  if(!A.size||!B.size)return false;
+  if(A.size<3||B.size<3)return false;            // titre trop court : on ne juge pas
   let inter=0;A.forEach(m=>{if(B.has(m))inter++});
-  return inter/Math.min(A.size,B.size)>=.6;      // sous-ensemble = doublon
+  // Jaccard, pas un rapport au plus petit : sinon un titre court était déclaré
+  // doublon de la moitié du flux et il ne restait que 4 actus sur 127.
+  return inter>=3 && inter/(A.size+B.size-inter)>=.45;
 }
 let ACTUS=[],SUJETS_VUS=[];   // sujets déjà transformés en posts (via l'historique)
 async function chargerActus(force){
