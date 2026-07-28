@@ -382,7 +382,8 @@ const BOITES=['apple','nvidia','tesla','spacex','meta','amazon','google','micros
   'anthropic','lvmh','totalenergies','bnp','société générale','carrefour','renault','stellantis',
   'airbus','orange','edf','netflix','samsung','binance','coinbase','hermès','l\'oréal'];
 const HORS=['football','ligue 1','rugby','tennis','météo','horoscope','people','cinéma',
-  'série tv','coupe du monde','les bleus','audiences tv','jeux olympiques','festival'];
+  'série tv','coupe du monde','les bleus','audiences tv','jeux olympiques','festival',
+  'box-office','box office','téléfilm','télé-réalité'];
 
 async function fluxRss(){
   try{
@@ -441,7 +442,13 @@ function similaires(a,b){
   return inter>=3 && inter/(A.size+B.size-inter)>=.45;
 }
 let ACTUS=[],SUJETS_VUS=[];   // sujets déjà transformés en posts (via l'historique)
+let CHARGE_ACTUS=false;
 async function chargerActus(force){
+  if(CHARGE_ACTUS)return;            // un seul chargement à la fois, sinon le
+  CHARGE_ACTUS=true;                 // résultat du plus lent écrase le plus récent
+  try{await _chargerActus(force)}finally{CHARGE_ACTUS=false}
+}
+async function _chargerActus(force){
   const zone=document.getElementById('listeActus');
   const cache=JSON.parse(localStorage.getItem(CACHE_ACTUS)||'null');
   if(cache&&!force&&Date.now()-cache.t<FRAICHEUR)return afficherActus(cache.liste,cache.t);
