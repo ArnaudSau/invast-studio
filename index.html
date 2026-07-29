@@ -889,9 +889,11 @@ function fusionner(nouveaux){
   const connus=new Set(POOL.map(a=>a.url));
   const ajouts=nouveaux.filter(a=>!connus.has(a.url)
     &&!POOL.some(v=>similaires(v.titre,a.titre)));
-  POOL=POOL.concat(ajouts)
-    .filter(a=>!a.date||Date.now()-a.date<RETENTION)   // on oublie au-delà de 3 j
-    .slice(0,300);
+  // les nouveautés passent DEVANT : avec l'ancien concat + slice(0,300),
+  // une fois le stock plein les ajouts étaient coupés et disparaissaient
+  POOL=ajouts.concat(POOL)
+    .filter(a=>a.theme==='fun'||!a.date||Date.now()-a.date<RETENTION)
+    .slice(0,400);
   localStorage.setItem(CLE_POOL,JSON.stringify({t:Date.now(),pool:POOL}));
   return ajouts.length;
 }
