@@ -159,6 +159,19 @@
   .actuf-a .pri{color:var(--or);border-color:var(--or)}
   body.clair .actuf-a button{background:#FFF}
   .score{font-weight:700;color:var(--rouge,#E63A2B)}
+  #veille{position:fixed;inset:0;background:var(--noir);display:none;z-index:55;
+    overflow-y:auto;overscroll-behavior:contain}
+  .v-body{max-width:920px;margin:0 auto;padding:14px 14px calc(30px + var(--safe))}
+  .chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+  .chip{font-size:11px;padding:4px 10px;border-radius:20px;cursor:pointer;
+    border:1px solid var(--bord);background:var(--noir);color:var(--gris)}
+  .chip.on{border-color:var(--or);color:var(--or)}
+  body.clair .chip{background:#FFF}
+  .sous{display:flex;gap:14px;margin:8px 0 12px;font-size:11.5px;color:var(--gris2)}
+  .sous span{cursor:pointer}
+  .sous span.on{color:var(--or);font-weight:600}
+  .just{font-size:10.5px;color:var(--gris2);font-style:italic;margin-top:3px}
+  .note{font-weight:700;color:var(--or)}
   #panActus{padding:14px}
   @media(min-width:800px){#panActus{padding:20px}}
   .pager{display:flex;align-items:center;gap:10px;margin-top:10px}
@@ -225,29 +238,10 @@
   </div>
 
   <!-- ACTUS DU JOUR -->
-  <div class="card" id="panActus" style="display:none">
-    <div class="titre">Actus du jour
-      <span class="maj"><b id="actusMaj"></b>
-        <span class="rech" onclick="chargerActus(true)">↻ Actualiser</span></span>
-    </div>
-    <div style="display:flex;gap:8px;margin-bottom:12px">
-      <input type="text" id="qActu" placeholder="Filtrer ou chercher : Nvidia, Livret A…"
-        oninput="filtrerActus()" onkeydown="if(event.key==='Enter')chercherActuWeb()">
-      <button class="btn mini" style="flex:none" onclick="chercherActuWeb()"
-        title="Chercher cette actu sur le web">🔎</button>
-    </div>
-    <div class="seg xs">
-      <button id="vueHot" class="on" onclick="setVue('hot')">🔥 Tendance</button>
-      <button id="vueRecent" onclick="setVue('recent')">Récentes</button>
-      <button id="vueAttente" onclick="setVue('attente')">⏳ Attente</button>
-      <button id="vueMasquees" onclick="setVue('masquees')">🗑 Masquées</button>
-    </div>
-    <div id="listeActus"><p class="vide">Chargement…</p></div>
-    <div class="pager">
-      <button class="btn sec mini" id="pagePrec" onclick="pageActus(-1)">‹ Précédent</button>
-      <span id="pageInfo"></span>
-      <button class="btn sec mini" id="pageSuiv" onclick="pageActus(1)">Suivant ›</button>
-    </div>
+  <div class="card" id="panVeille" style="display:none">
+    <div class="titre">Veille <span class="maj"><b id="actusMaj"></b></span></div>
+    <div id="apercuActus"><p class="vide">Chargement…</p></div>
+    <button class="btn" style="margin-top:12px" onclick="ouvrirVeille()">📰 Ouvrir la veille</button>
   </div>
 
   <!-- LANCER -->
@@ -272,6 +266,45 @@
   <div class="card" id="panHisto" style="display:none">
     <div class="titre">Historique <span class="fin" onclick="chargerHistorique()" style="cursor:pointer">↻ 7 jours</span></div>
     <div id="runs"><p class="vide">Chargement…</p></div>
+  </div>
+</div>
+
+<!-- PAGE VEILLE -->
+<div id="veille">
+  <div class="ed-top">
+    <div class="ico" onclick="fermerVeille()">←</div>
+    <div class="t">Veille</div>
+    <div class="ico" onclick="chargerActus(true)" title="Chercher les nouveautés">↻</div>
+  </div>
+  <div class="v-body">
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <input type="text" id="qActu" placeholder="Filtrer ou chercher : Nvidia, Livret A…"
+        oninput="filtrerActus()" onkeydown="if(event.key==='Enter')chercherActuWeb()">
+      <button class="btn mini" style="flex:none" onclick="chercherActuWeb()"
+        title="Chercher cette actu sur le web">🔎</button>
+    </div>
+    <div class="seg xs">
+      <button id="vueTop" onclick="setVue('top')">⭐ Top actu</button>
+      <button id="vueHot" class="on" onclick="setVue('hot')">🔥 Chaudes</button>
+      <button id="vueRecent" onclick="setVue('recent')">Récentes</button>
+      <button id="vueFun" onclick="setVue('fun')">🎬 Fun</button>
+    </div>
+    <div class="sous">
+      <span id="vueAttente" onclick="setVue('attente')">⏳ En attente</span>
+      <span id="vueMasquees" onclick="setVue('masquees')">🗑 Masquées</span>
+      <span style="margin-left:auto" id="infoVue"></span>
+    </div>
+    <div class="chips" id="rubriques"></div>
+    <div id="listeActus"><p class="vide">Chargement…</p></div>
+    <div class="pager">
+      <button class="btn sec mini" id="pagePrec" onclick="pageActus(-1)">‹ Précédent</button>
+      <span id="pageInfo"></span>
+      <button class="btn sec mini" id="pageSuiv" onclick="pageActus(1)">Suivant ›</button>
+    </div>
+    <div class="card" style="margin-top:18px">
+      <div class="titre">Comptes à surveiller</div>
+      <div class="chips" id="comptes"></div>
+    </div>
   </div>
 </div>
 
@@ -417,7 +450,7 @@ async function init(){
   if(!TOKEN){basculerCfg();return}
   const r=await fetch(API,{headers:H()});
   if(!r.ok){toast('Token GitHub refusé');basculerCfg();return}
-  panActus.style.display='block';panLancer.style.display='block';panHisto.style.display='block';
+  panVeille.style.display='block';panLancer.style.display='block';panHisto.style.display='block';
   verifierRunEnCours();
   await chargerHistorique();      // remplit SUJETS_VUS avant le tri des actus
   chargerActus(false);
@@ -561,9 +594,50 @@ const TRIS={
 };
 function setVue(v){
   VUE=v;PAGE=0;
-  ['hot','recent','attente','masquees'].forEach(k=>
+  ['top','hot','recent','fun','attente','masquees'].forEach(k=>
     document.getElementById('vue'+k[0].toUpperCase()+k.slice(1)).classList.toggle('on',k===v));
+  if(v==='fun')chargerFun();
   rendreActus();
+}
+function ouvrirVeille(){document.getElementById('veille').style.display='block';
+  document.body.style.overflow='hidden';rendreActus();}
+function fermerVeille(){document.getElementById('veille').style.display='none';
+  document.body.style.overflow='';}
+
+/* ---------- rubriques presse : un filtre par média présent dans le stock ---------- */
+let SOURCE='';
+function setSource(s){SOURCE=SOURCE===s?'':s;PAGE=0;rendreActus();}
+function rendreRubriques(){
+  const z=document.getElementById('rubriques');if(!z)return;
+  const compte={};
+  POOL.forEach(a=>{if(!etatDe(a)){const s=a.source||dom(a.url);compte[s]=(compte[s]||0)+1}});
+  const tri=Object.entries(compte).sort((x,y)=>y[1]-x[1]).slice(0,12);
+  z.innerHTML='';
+  tri.forEach(([s,n])=>{
+    const c=document.createElement('span');
+    c.className='chip'+(SOURCE===s?' on':'');c.textContent=s+' '+n;
+    c.onclick=()=>setSource(s);z.appendChild(c);
+  });
+}
+
+/* ---------- comptes Instagram à surveiller (ouverture directe) ---------- */
+const CLE_COMPTES='invast_comptes';
+const COMPTES_DEF=['aktionnaire','bourseko','zonebourse','francecrypto'];
+function comptes(){try{return JSON.parse(localStorage.getItem(CLE_COMPTES))||COMPTES_DEF}
+  catch(e){return COMPTES_DEF}}
+function rendreComptes(){
+  const z=document.getElementById('comptes');if(!z)return;
+  z.innerHTML='';
+  comptes().forEach(c=>{
+    const a=document.createElement('a');a.className='chip';a.textContent='@'+c;
+    a.href='https://www.instagram.com/'+c+'/';a.target='_blank';a.rel='noopener';
+    z.appendChild(a);
+  });
+  const plus=document.createElement('span');plus.className='chip';plus.textContent='＋';
+  plus.onclick=()=>{const n=prompt('Compte Instagram à suivre (sans @)');
+    if(n){const l=comptes().concat(n.replace('@','').trim());
+      localStorage.setItem(CLE_COMPTES,JSON.stringify(l));rendreComptes();}};
+  z.appendChild(plus);
 }
 
 /* ---------- mémoire de veille : ce que j'ai écarté, mis de côté, publié ----------
@@ -621,7 +695,9 @@ function filtrerActus(){
   PAGE=0;rendreActus();
 }
 function rendreActus(){
-  const liste=VUE==='hot'||VUE==='recent';
+  apercuAccueil();rendreRubriques();rendreComptes();
+  if(VUE==='top')return rendreTop();
+  const liste=VUE==='hot'||VUE==='recent'||VUE==='fun';
   const tri=TRIS[VUE==='recent'?'recent':'hot'];
   const filtre=[];
   for(const a of [...POOL].sort(tri)){
@@ -629,6 +705,9 @@ function rendreActus(){
     if(liste&&e)continue;                                     // écartée ou en attente
     if(VUE==='attente'&&e!=='attente')continue;
     if(VUE==='masquees'&&e!=='masquee')continue;
+    if(VUE==='fun'&&a.theme!=='fun')continue;
+    if(VUE!=='fun'&&a.theme==='fun')continue;                 // le fun a son onglet
+    if(SOURCE&&(a.source||dom(a.url))!==SOURCE)continue;
     if(FILTRE&&!(a.titre+' '+(a.resume||'')).toLowerCase().includes(FILTRE))continue;
     if(liste&&SUJETS_VUS.some(s=>similaires(s,a.titre)))continue;  // déjà passé en post
     if(filtre.some(v=>similaires(v.titre,a.titre)))continue;       // doublon
@@ -642,6 +721,7 @@ function rendreActus(){
       ?'<p class="vide">Rien en stock pour « '+echap(FILTRE)+' » · appuie sur 🔎 pour chercher sur le web</p>'
       :VUE==='attente'?'<p class="vide">Aucune actu mise de côté</p>'
       :VUE==='masquees'?'<p class="vide">Aucune actu masquée</p>'
+      :VUE==='fun'?'<p class="vide">Recherche des sujets du moment…</p>'
       :'<p class="vide">Aucune actu en stock</p>';
     document.getElementById('pageInfo').textContent='';
     document.getElementById('pagePrec').disabled=true;
@@ -655,7 +735,7 @@ function rendreActus(){
 function pageActus(d){
   const n=PAGE+d;if(n<0||n>=PAGES.length)return;
   PAGE=n;rendreActus();
-  document.getElementById('panActus').scrollIntoView({behavior:'smooth',block:'start'});
+  panLancer.scrollIntoView({behavior:'smooth',block:'center'});
 }
 /* Recherche ciblée : quand tu sais qu'une boîte va faire l'actu, tu vas la
    chercher directement au lieu d'attendre qu'elle remonte dans les flux.
@@ -682,6 +762,128 @@ async function chercherActuWeb(){
     toast(n?'+ '+n+' résultat'+(n>1?'s':''):'Déjà dans ta liste');
   }catch(e){toast('Recherche impossible')}
   PAGE=0;rendreActus();
+}
+/* Aperçu sur l'accueil : les 3 plus chaudes, pour voir sans ouvrir la page */
+function apercuAccueil(){
+  const z=document.getElementById('apercuActus');if(!z)return;
+  const top=[...POOL].filter(a=>!etatDe(a)&&a.theme!=='fun')
+    .sort(TRIS.hot).slice(0,3);
+  if(!top.length){z.innerHTML='<p class="vide">Aucune actu en stock</p>';return}
+  z.innerHTML=top.map(a=>'<div class="actuf"><div class="actuf-c">'
+    +'<a class="actuf-t" href="'+a.url+'" target="_blank" rel="noopener">'
+    +(chaud(a)>=8?'<span class="badge chaud">HOT '+chaud(a)+'</span>':'')
+    +echap(a.titre)+'</a><div class="actuf-m"><span class="pastille">'
+    +echap(a.source||dom(a.url))+'</span><span>'+ilYA(a.date)+'</span></div></div></div>').join('');
+}
+
+/* ---------- ⭐ Top actu : la même curation que le mode auto, sur ton stock ----------
+   Déclenché à la main uniquement : c'est le seul écran qui consomme des crédits. */
+const CLE_TOP='invast_top';
+let TOP=JSON.parse(localStorage.getItem(CLE_TOP)||'null');
+function rendreTop(){
+  const z=document.getElementById('listeActus');
+  document.getElementById('pageInfo').textContent='';
+  document.getElementById('pagePrec').disabled=true;
+  document.getElementById('pageSuiv').disabled=true;
+  const btn='<button class="btn" onclick="genererTopActu()">⭐ Générer le top actu</button>';
+  if(!TOP||!TOP.liste||!TOP.liste.length){
+    z.innerHTML='<p class="vide">Claude choisit les 5 meilleures actus de ton stock,'
+      +' avec une note et une justification.</p>'+btn;return;
+  }
+  ACTUS=TOP.liste;
+  z.innerHTML='';
+  TOP.liste.forEach((a,i)=>{
+    const d=document.createElement('div');d.className='actuf';
+    d.innerHTML='<div class="actuf-c"><a class="actuf-t" href="'+a.url+'" target="_blank" rel="noopener">'
+      +'<span class="note">'+(a.note||'')+'/10</span> '+echap(a.titre)+'</a>'
+      +'<div class="actuf-m"><span class="pastille">'+echap(a.source||dom(a.url))+'</span>'
+      +'<span>'+ilYA(a.date)+'</span></div>'
+      +(a.justification?'<div class="just">'+echap(a.justification)+'</div>':'')+'</div>';
+    const act=document.createElement('div');act.className='actuf-a';
+    const b=document.createElement('button');b.textContent='✨';b.className='pri';
+    b.title='Créer un visuel';b.onclick=()=>creerDepuisActu(i);act.appendChild(b);
+    d.appendChild(act);z.appendChild(d);
+  });
+  const p=document.createElement('div');p.style.marginTop='12px';
+  p.innerHTML='<p class="hint" style="margin-bottom:8px">Classement du '+ilYA(TOP.t)+'</p>'+btn;
+  z.appendChild(p);
+}
+async function genererTopActu(){
+  const cle=localStorage.getItem('invast_claude');
+  if(!cle)return toast('Ajoute ta clé Anthropic dans ⚙');
+  const cands=[...POOL].filter(a=>!etatDe(a)&&a.theme!=='fun').sort(TRIS.hot).slice(0,40)
+    .map(a=>({titre:a.titre,resume:(a.resume||'').slice(0,180),url:a.url,
+              source:a.source||dom(a.url),date:a.date}));
+  if(!cands.length)return toast('Stock vide');
+  const z=document.getElementById('listeActus');
+  z.innerHTML='<p class="vide">Claude analyse '+cands.length+' actus…</p>';
+  const prompt='Tu sélectionnes les actus pour @arnaud_saudrais, créateur finance perso '
+    +'sur Instagram (audience grand public française débutante).\n\n'
+    +'CRITÈRES : actu fraîche, impact concret ou chiffre marquant, compréhensible sans '
+    +'jargon, qui parle au plus grand nombre. Écarter : trop niche, trop technique, '
+    +'micro-variation de cours sans histoire, contenu pédagogique intemporel.\n\n'
+    +'CANDIDATS :\n'+JSON.stringify(cands)+'\n\n'
+    +'Note chaque candidat sur 10, fusionne les doublons, et retiens les 5 MEILLEURS.\n'
+    +'Réponds UNIQUEMENT en JSON : [{"url":"...","note":8,"justification":"une phrase, '
+    +'pourquoi ça marchera sur Instagram"}]';
+  try{
+    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',
+      headers:{'x-api-key':cle,'anthropic-version':'2023-06-01',
+               'anthropic-dangerous-direct-browser-access':'true','content-type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1200,
+        messages:[{role:'user',content:prompt}]})});
+    const txt=((await r.json()).content?.[0]?.text||'').trim();
+    const m=txt.match(/\[[\s\S]*\]/);if(!m)throw new Error('réponse illisible');
+    const choix=JSON.parse(m[0]).slice(0,5);
+    const liste=choix.map(c=>{
+      const a=POOL.find(x=>x.url===c.url);
+      return a?{...a,note:c.note,justification:c.justification}:null;
+    }).filter(Boolean);
+    if(!liste.length)throw new Error('aucune correspondance');
+    TOP={t:Date.now(),liste};localStorage.setItem(CLE_TOP,JSON.stringify(TOP));
+    toast('⭐ '+liste.length+' actus retenues');
+  }catch(e){toast('Échec : '+String(e.message||e).slice(0,45));}
+  rendreTop();
+}
+
+/* ---------- 🎬 Fun : l'argent derrière ce dont tout le monde parle ----------
+   Thèmes fixes + événements détectés dans le stock du jour. */
+const CLE_FUN='invast_fun';
+const FUN_FIXE=['box-office recettes millions','salaire joueur football millions',
+  'transfert record millions','cachet artiste concert millions',
+  'budget jeux olympiques milliards','droits TV diffusion millions',
+  'sponsoring contrat millions','fortune classement milliardaires'];
+const EVENEMENTS=[['jeux olympiques','budget jeux olympiques coût'],
+  ['coupe du monde','coupe du monde retombées économiques'],
+  ['tour de france','tour de france budget prize money'],
+  ['roland-garros','roland garros prize money'],
+  ['ballon d\'or','ballon d\'or salaire'],
+  ['festival de cannes','festival de cannes budget'],
+  ['oscars','oscars retombées box-office'],
+  ['eurovision','eurovision coût budget'],
+  ['super bowl','super bowl publicité prix spot']];
+function requetesFun(){
+  const txt=POOL.map(a=>a.titre).join(' ').toLowerCase();
+  const chaudes=EVENEMENTS.filter(([k])=>txt.includes(k)).map(([,q])=>q);
+  return chaudes.concat(FUN_FIXE).slice(0,6);      // l'actualité du moment d'abord
+}
+async function chargerFun(){
+  const cache=JSON.parse(localStorage.getItem(CLE_FUN)||'null');
+  if(cache&&Date.now()-cache.t<FRAICHEUR)return;
+  if(!proxyBase())return;
+  const vraiLien=x=>{try{const p=new URL(x).searchParams.get('url');
+    return p?decodeURIComponent(p):x}catch(e){return x}};
+  const lots=await Promise.all(requetesFun().map(async q=>{
+    try{const u='https://www.bing.com/news/search?q='+encodeURIComponent(q)
+      +'&format=RSS&setmkt=fr-FR&_='+Date.now();
+      return parserFlux(await viaProxyTexte(u),'').map(a=>{const url=vraiLien(a.url);
+        return {...a,url,source:dom(url),theme:'fun'}});
+    }catch(e){return []}
+  }));
+  const arts=lots.flat().map(a=>({...a,score:2,viral:scoreViral(a)}));
+  fusionner(arts);
+  localStorage.setItem(CLE_FUN,JSON.stringify({t:Date.now()}));
+  rendreActus();
 }
 function fusionner(nouveaux){
   const connus=new Set(POOL.map(a=>a.url));
@@ -763,6 +965,7 @@ function afficherActus(liste){
 function creerDepuisActu(i){
   const a=ACTUS[i];if(!a)return;
   marquer(a.url,'generee',a.titre);      // signal fort pour l'apprentissage
+  fermerVeille();                        // on revient au bloc Générer
   setMode('sujet');
   document.getElementById('sujet').value=
     a.titre+(a.resume?'\n\n'+a.resume:'')+'\n\nSource : '+a.url;
