@@ -147,9 +147,10 @@
     padding:9px 0;border-top:1px solid var(--bord)}
   .actuf:first-child{border-top:none;padding-top:2px}
   .actuf-c{flex:1;min-width:0}
-  .actuf-t{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
-    overflow:hidden;font-size:13px;font-weight:600;line-height:1.32;
+  /* titre entier : sur mobile on doit pouvoir le lire sans le tronquer */
+  .actuf-t{display:block;font-size:12.5px;font-weight:600;line-height:1.3;
     color:var(--blanc);text-decoration:none}
+  @media(min-width:800px){.actuf-t{font-size:13.5px}}
   .actuf-t:active{color:var(--or)}
   .actuf-a{display:flex;gap:5px;flex:none}
   .actuf-a button{width:33px;height:33px;padding:0;border-radius:9px;cursor:pointer;
@@ -1104,7 +1105,7 @@ function rendre(){
   const tw=ctx.measureText(hd.txt).width,pw=tw+2*hd.ph,ph=hd.size+2*hd.pv;
   rr(hd.x,hd.y,pw,ph,ph/2);ctx.fillStyle='#fff';ctx.fill();
   ctx.fillStyle='#000';ctx.fillText(hd.txt,hd.x+hd.ph,hd.y+ph/2+2);
-  const ti=T.titre,texte=edTitre.value.trim(),P=ti.poids;
+  const ti=T.titre,texte=edTitre.value.replace(/^\n+|\s+$/g,''),P=ti.poids;
   const xT=ti.mg+ti.ox;                       // décalages libres de l'éditeur
   const largMax=ti.larg;let size=ti.max,lignes;
   for(;;){ctx.font=P+' '+size+'px Poppins';lignes=couper(texte,largMax);
@@ -1118,11 +1119,21 @@ function rendre(){
   ctx.font=P+' '+size+'px Poppins';ctx.fillStyle='#fff';
   lignes.forEach((l,i)=>ctx.fillText(l,xT,yT+i*lh+lh/2+2));
 }
+/* Les retours à la ligne tapés dans l'éditeur sont respectés tels quels ;
+   à l'intérieur d'un paragraphe, le texte se replie tout seul sur la largeur. */
 function couper(txt,max){
-  const mots=txt.split(/\s+/),out=[];let cur='';
-  for(const m of mots){const t=(cur+' '+m).trim();
-    if(ctx.measureText(t).width<=max)cur=t;else{if(cur)out.push(cur);cur=m;}}
-  if(cur)out.push(cur);return out.length?out:[''];
+  const out=[];
+  txt.split('\n').forEach(para=>{
+    if(!para.trim()){out.push('');return}          // ligne vide volontaire
+    const mots=para.trim().split(/ +/);let cur='';
+    for(const m of mots){
+      const t=cur?cur+' '+m:m;
+      if(ctx.measureText(t).width<=max)cur=t;
+      else{if(cur)out.push(cur);cur=m}
+    }
+    if(cur)out.push(cur);
+  });
+  return out.length?out:[''];
 }
 function rr(x,y,w,h,r){ctx.beginPath();ctx.roundRect(x,y,w,h,r);}
 function telechargerCanvas(){
