@@ -863,9 +863,11 @@ function blocRun(nom,m){
       b1.onclick=()=>telechargerFichier('archive/'+nom+'/'+v.carte,v.carte);
       const b2=document.createElement('button');b2.textContent='📤';
       b2.onclick=()=>envoyerArchiveTelegram(nom,v);
+      const b4=document.createElement('button');b4.textContent='🗑';
+      b4.title='Supprimer ce post';b4.onclick=()=>supprimerPost(nom,v);
       const b3=document.createElement('button');b3.textContent='Éditer';b3.className='pri';
       b3.onclick=()=>ouvrirEditeur(nom,a,v);
-      bar.append(b1,b2,b3);p.append(img,bar);g.appendChild(p);
+      bar.append(b1,b2,b4,b3);p.append(img,bar);g.appendChild(p);
     });
     bloc.appendChild(g);div.appendChild(bloc);
   });
@@ -1032,8 +1034,13 @@ async function genererAccroches(){
     +'(finance perso, audience grand public française débutante).\n\n'
     +'ACTU : '+sujet+'\n'+(srcs?'Sources : '+srcs+'\n':'')
     +'\nAccroches déjà proposées, n\'en refais aucune :\n- '+deja+'\n\n'
-    +'Donne 4 NOUVELLES accroches, 4 angles différents.\n\n'
+    +'TITRE ACTUEL, à retravailler : « '+edTitre.value.trim()+' »\n\n'
+    +'Donne 4 VARIATIONS de ce titre, pas 4 titres différents. On garde le même\n'
+    +'angle et LES MÊMES CHIFFRES CLÉS, on change la formulation, le rythme, l\'ordre\n'
+    +'des éléments, l\'accroche d\'entrée. Chaque variation doit rester immédiatement\n'
+    +'reconnaissable comme le même post, en plus percutant.\n\n'
     +'RÈGLES ABSOLUES :\n'
+    +'- Tous les chiffres du titre actuel sont conservés à l\'identique.\n'
     +'- FIDÉLITÉ TOTALE aux faits : aucun chiffre, aucune affirmation qui ne soit pas '
     +'dans l\'actu ci-dessus. Zéro exagération, zéro putaclic mensonger. En cas de doute, '
     +'reste factuel.\n'
@@ -1251,9 +1258,33 @@ async function gh(chemin,opts){
   if(!r.ok) throw new Error(chemin.split('/').pop()+' '+r.status);
   return r.json();
 }
+/* Supprime un post de l'archive : le fichier est retiré du dépôt (il reste
+   récupérable dans l'historique Git) et la variante sort du manifest. */
+async function supprimerPost(run,v){
+  if(!confirm('Supprimer ce post de l\'historique ?\n\n'+(v.titre||'').slice(0,90)))return;
+  toast('Suppression…');
+  try{
+    const txt=await (await fetch(API+'/contents/archive/'+run+'/manifest.json',
+      {headers:H(true)})).text();
+    const m=JSON.parse(txt);
+    m.actus=(m.actus||[]).map(a=>({...a,
+      variantes:(a.variantes||[]).filter(x=>x.carte!==v.carte)}))
+      .filter(a=>a.variantes.length);
+    const fichiers=[{chemin:'archive/'+run+'/'+v.carte,supprimer:true}];
+    // le fond n'est retiré que s'il n'est plus utilisé par une autre variante
+    const encoreUtilise=m.actus.some(a=>a.variantes.some(x=>x.fond===v.fond));
+    if(v.fond&&!encoreUtilise)fichiers.push({chemin:'archive/'+run+'/'+v.fond,supprimer:true});
+    fichiers.push({chemin:'archive/'+run+'/manifest.json',
+      b64:btoa(unescape(encodeURIComponent(JSON.stringify(m,null,1))))});
+    await commitFichiers(fichiers,'suppression '+v.carte+' [skip ci]');
+    toast('Post supprimé');
+    setTimeout(chargerHistorique,1500);
+  }catch(e){toast('Échec : '+String(e.message||e).slice(0,50));}
+}
 async function commitFichiers(fichiers,message){
   const arbre=[];
   for(const f of fichiers){
+    if(f.supprimer){arbre.push({path:f.chemin,mode:'100644',type:'blob',sha:null});continue}
     const b=await gh('/git/blobs',{method:'POST',
       body:JSON.stringify({content:f.b64,encoding:'base64'})});
     arbre.push({path:f.chemin,mode:'100644',type:'blob',sha:b.sha});
