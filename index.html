@@ -686,6 +686,26 @@ function chaud(a){
 const etatDe=a=>(MARQUES[a.url]||{}).etat||'';
 const estCrypto=a=>a.theme==='crypto'||
   /\b(crypto|bitcoin|btc|ethereum|altcoin|stablecoin|blockchain|nft|token)\b/i.test(a.titre);
+/* ---------- comptes Instagram à surveiller (ouverture directe) ---------- */
+const CLE_COMPTES='invast_comptes';
+const COMPTES_DEF=['aktionnaire','bourseko','zonebourse','francecrypto'];
+function comptes(){try{return JSON.parse(localStorage.getItem(CLE_COMPTES))||COMPTES_DEF}
+  catch(e){return COMPTES_DEF}}
+function rendreComptes(){
+  const z=document.getElementById('comptes');if(!z)return;
+  z.innerHTML='';
+  comptes().forEach(c=>{
+    const a=document.createElement('a');a.className='chip';a.textContent='@'+c;
+    a.href='https://www.instagram.com/'+c+'/';a.target='_blank';a.rel='noopener';
+    z.appendChild(a);
+  });
+  const plus=document.createElement('span');plus.className='chip';plus.textContent='＋';
+  plus.onclick=()=>{const n=prompt('Compte Instagram à suivre (sans @)');
+    if(n){const l=comptes().concat(n.replace('@','').trim());
+      localStorage.setItem(CLE_COMPTES,JSON.stringify(l));rendreComptes();}};
+  z.appendChild(plus);
+}
+
 /* ---------- SÉLECTION DU JOUR ----------
    Entonnoir : pré-filtre local gratuit (rubriques + fraîcheur + doublons), puis
    UN seul appel modèle sur la trentaine de survivants, déclenché à la main. */
