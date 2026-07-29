@@ -174,6 +174,31 @@
   .note{font-weight:700;color:var(--or)}
   #panActus{padding:14px}
   @media(min-width:800px){#panActus{padding:20px}}
+  .nav{position:fixed;left:0;right:0;bottom:0;z-index:40;display:flex;
+    background:var(--voile);backdrop-filter:blur(14px);border-top:1px solid var(--bord);
+    padding-bottom:var(--safe)}
+  .nav button{flex:1;background:none;border:none;color:var(--gris);font-family:inherit;
+    font-size:11px;padding:9px 4px 8px;cursor:pointer;display:flex;flex-direction:column;
+    align-items:center;gap:3px}
+  .nav button b{font-size:17px;font-weight:400;line-height:1}
+  .nav button:active{color:var(--or)}
+  /* --- cartes de sélection --- */
+  .sel{border:1px solid var(--bord);border-radius:13px;padding:12px;margin-bottom:9px;
+    background:var(--noir)}
+  body.clair .sel{background:#FFF}
+  .sel-h{display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap}
+  .rub{font-size:9.5px;font-weight:800;letter-spacing:.6px;padding:2px 7px;
+    border-radius:5px;background:var(--or);color:#17130A;text-transform:uppercase}
+  .sel-n{font-size:11px;font-weight:700;color:var(--or);margin-left:auto}
+  .sel-t{display:block;font-size:13.5px;font-weight:600;line-height:1.3;
+    color:var(--blanc);text-decoration:none}
+  .sel-a{font-size:11.5px;color:var(--gris2);font-style:italic;margin-top:5px}
+  .sel-b{display:flex;gap:6px;margin-top:9px}
+  .sel-b button{flex:none}
+  .bloc-t{display:flex;align-items:baseline;gap:10px;margin:20px 0 10px}
+  .bloc-t h3{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1.6px;
+    color:var(--or)}
+  .bloc-t span{font-size:11px;color:var(--gris2);margin-left:auto}
   .pager{display:flex;align-items:center;gap:10px;margin-top:10px}
   .pager button{width:auto;flex:none;padding:8px 13px;font-size:12.5px}
   .pager span{font-size:11px;color:var(--gris2);margin:0 auto}
@@ -238,12 +263,6 @@
   </div>
 
   <!-- ACTUS DU JOUR -->
-  <div class="card" id="panVeille" style="display:none">
-    <div class="titre">Veille <span class="maj"><b id="actusMaj"></b></span></div>
-    <div id="apercuActus"><p class="vide">Chargement…</p></div>
-    <button class="btn" style="margin-top:12px" onclick="ouvrirVeille()">📰 Ouvrir la veille</button>
-  </div>
-
   <!-- LANCER -->
   <div class="card" id="panLancer" style="display:none">
     <div class="titre">Générer</div>
@@ -277,34 +296,27 @@
     <div class="ico" onclick="chargerActus(true)" title="Chercher les nouveautés">↻</div>
   </div>
   <div class="v-body">
-    <div style="display:flex;gap:8px;margin-bottom:12px">
-      <input type="text" id="qActu" placeholder="Filtrer ou chercher : Nvidia, Livret A…"
-        oninput="filtrerActus()" onkeydown="if(event.key==='Enter')chercherActuWeb()">
-      <button class="btn mini" style="flex:none" onclick="chercherActuWeb()"
-        title="Chercher cette actu sur le web">🔎</button>
+    <div class="bloc-t"><h3>Sélection du jour</h3><span id="selInfo"></span></div>
+    <div id="blocSel"></div>
+
+    <div class="bloc-t"><h3>🎬 Angle argent</h3></div>
+    <div id="blocFun"></div>
+
+    <div class="card" style="margin-top:20px">
+      <div class="titre">Chercher un sujet</div>
+      <div style="display:flex;gap:8px">
+        <input type="text" id="qActu" placeholder="Nvidia, Livret A, Trump…"
+          onkeydown="if(event.key==='Enter')chercherActuWeb()">
+        <button class="btn mini" style="flex:none" onclick="chercherActuWeb()">🔎</button>
+      </div>
+      <div id="listeActus"></div>
     </div>
-    <div class="seg xs">
-      <button id="vueTop" onclick="setVue('top')">⭐ Top actu</button>
-      <button id="vueHot" class="on" onclick="setVue('hot')">🔥 Chaudes</button>
-      <button id="vueRecent" onclick="setVue('recent')">Récentes</button>
-      <button id="vueFun" onclick="setVue('fun')">🎬 Fun</button>
-    </div>
-    <div class="sous">
-      <span id="vueAttente" onclick="setVue('attente')">⏳ En attente</span>
-      <span id="vueMasquees" onclick="setVue('masquees')">🗑 Masquées</span>
-      <span style="margin-left:auto" id="infoVue"></span>
-    </div>
-    <div class="chips" id="rubriques"></div>
-    <div id="listeActus"><p class="vide">Chargement…</p></div>
-    <div class="pager">
-      <button class="btn sec mini" id="pagePrec" onclick="pageActus(-1)">‹ Précédent</button>
-      <span id="pageInfo"></span>
-      <button class="btn sec mini" id="pageSuiv" onclick="pageActus(1)">Suivant ›</button>
-    </div>
-    <div class="card" style="margin-top:18px">
+
+    <div class="card">
       <div class="titre">Comptes à surveiller</div>
       <div class="chips" id="comptes"></div>
     </div>
+    <p class="hint" id="stockInfo" style="text-align:center;margin-top:14px"></p>
   </div>
 </div>
 
@@ -406,6 +418,11 @@
     <button class="btn sec" id="btnSave" onclick="enregistrerModifs()">💾 Enregistrer les modifications</button>
   </div>
 </div>
+<nav class="nav" id="nav" style="display:none">
+  <button onclick="ouvrirVeille()"><b>📰</b>Veille</button>
+  <button onclick="allerA('panLancer')"><b>⚡</b>Générer</button>
+  <button onclick="allerA('panHisto')"><b>🗂</b>Historique</button>
+</nav>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -450,7 +467,7 @@ async function init(){
   if(!TOKEN){basculerCfg();return}
   const r=await fetch(API,{headers:H()});
   if(!r.ok){toast('Token GitHub refusé');basculerCfg();return}
-  panVeille.style.display='block';panLancer.style.display='block';panHisto.style.display='block';
+  nav.style.display='flex';panLancer.style.display='block';panHisto.style.display='block';
   verifierRunEnCours();
   await chargerHistorique();      // remplit SUJETS_VUS avant le tri des actus
   chargerActus(false);
@@ -473,7 +490,17 @@ const RSS_SECOURS=[
   {nom:'Capital',url:'https://feed.prismamediadigital.com/v1/cap/rss?limit=20'},
   {nom:'Cryptoast',url:'https://cryptoast.fr/feed/',theme:'crypto'},
   {nom:'Journal du Coin',url:'https://journalducoin.com/feed/',theme:'crypto'},
-  {nom:'Usine Nouvelle',url:'https://www.usinenouvelle.com/rss'}];
+  {nom:'Usine Nouvelle',url:'https://www.usinenouvelle.com/rss'}]
+  // Ces médias n'exposent plus de flux public : on passe par Bing News, qui les
+  // indexe. Seul Boursorama reste inaccessible.
+  .concat(['lesechos.fr','latribune.fr','lefigaro.fr','reuters.com',
+           'investir.lesechos.fr','zonebourse.com'].map(d=>({
+    nom:d.replace(/\.(fr|com)$/,'').replace('investir.lesechos','Investir')
+        .replace('lesechos','Les Échos').replace('latribune','La Tribune')
+        .replace('lefigaro','Le Figaro').replace('reuters','Reuters')
+        .replace('zonebourse','Zonebourse'),
+    url:'https://www.bing.com/news/search?q='+encodeURIComponent('site:'+d)
+        +'&format=RSS&setmkt=fr-FR'})));
 /* mêmes critères que la curation du robot, en version locale et gratuite */
 const MOTS=['bourse','action','crypto','bitcoin','ethereum','taux','bce','fed','inflation',
   'livret a','pea','assurance-vie','épargne','epargne','ipo','introduction en bourse','résultats',
@@ -497,6 +524,8 @@ async function fluxRss(){
   }catch(e){}
   return RSS_SECOURS;
 }
+const vraiLien=x=>{try{const p=new URL(x).searchParams.get('url');
+  return p?decodeURIComponent(p):x}catch(e){return x}};
 function parserFlux(xml,nom){
   let d=new DOMParser().parseFromString(xml,'text/xml');
   // certains sites servent le flux avec un en-tête HTML : second essai en mode HTML
@@ -509,6 +538,7 @@ function parserFlux(xml,nom){
     let u=(lien?.getAttribute('href')||lien?.textContent||'').trim();
     if(!u)u=(lien?.nextSibling?.textContent||'').trim();
     if(!/^https?:/.test(u))u=(it.querySelector('guid')?.textContent||'').trim();
+    u=vraiLien(u);
     return {titre:(it.querySelector('title')?.textContent||'').trim(),
       url:u,
       date:dt?new Date(dt).getTime()||0:0,
@@ -582,62 +612,48 @@ function similaires(a,b){
   // doublon de la moitié du flux et il ne restait que 4 actus sur 127.
   return inter>=3 && inter/(A.size+B.size-inter)>=.45;
 }
-let ACTUS=[],SUJETS_VUS=[];   // sujets déjà transformés en posts (via l'historique)
+let SUJETS_VUS=[];   // sujets déjà transformés en posts (via l'historique)
 /* Un seul stock d'actus (POOL), trois tris, une pagination 5 par 5.
    « Actualiser » n'échange plus la sélection : il va chercher les flux et
    AJOUTE au stock les articles qu'on n'avait pas encore. */
 const CLE_POOL='invast_pool', RETENTION=3*24*3600*1000, PAR_PAGE=5;
-let POOL=[], VUE='hot', PAGE=0, PAGES=[];
+let POOL=[];
 const TRIS={
   recent:(x,y)=>(y.date||0)-(x.date||0),
   hot:(x,y)=>chaud(y)-chaud(x)||(y.date||0)-(x.date||0)
 };
-function setVue(v){
-  VUE=v;PAGE=0;
-  ['top','hot','recent','fun','attente','masquees'].forEach(k=>
-    document.getElementById('vue'+k[0].toUpperCase()+k.slice(1)).classList.toggle('on',k===v));
-  if(v==='fun')chargerFun();
-  rendreActus();
-}
+function allerA(id){fermerVeille();
+  document.getElementById(id).scrollIntoView({behavior:'smooth',block:'start'});}
 function ouvrirVeille(){document.getElementById('veille').style.display='block';
-  document.body.style.overflow='hidden';rendreActus();}
+  document.body.style.overflow='hidden';rendreVeille();rendreComptes();}
 function fermerVeille(){document.getElementById('veille').style.display='none';
   document.body.style.overflow='';}
 
-/* ---------- rubriques presse : un filtre par média présent dans le stock ---------- */
-let SOURCE='';
-function setSource(s){SOURCE=SOURCE===s?'':s;PAGE=0;rendreActus();}
-function rendreRubriques(){
-  const z=document.getElementById('rubriques');if(!z)return;
-  const compte={};
-  POOL.forEach(a=>{if(!etatDe(a)){const s=a.source||dom(a.url);compte[s]=(compte[s]||0)+1}});
-  const tri=Object.entries(compte).sort((x,y)=>y[1]-x[1]).slice(0,12);
-  z.innerHTML='';
-  tri.forEach(([s,n])=>{
-    const c=document.createElement('span');
-    c.className='chip'+(SOURCE===s?' on':'');c.textContent=s+' '+n;
-    c.onclick=()=>setSource(s);z.appendChild(c);
-  });
-}
-
-/* ---------- comptes Instagram à surveiller (ouverture directe) ---------- */
-const CLE_COMPTES='invast_comptes';
-const COMPTES_DEF=['aktionnaire','bourseko','zonebourse','francecrypto'];
-function comptes(){try{return JSON.parse(localStorage.getItem(CLE_COMPTES))||COMPTES_DEF}
-  catch(e){return COMPTES_DEF}}
-function rendreComptes(){
-  const z=document.getElementById('comptes');if(!z)return;
-  z.innerHTML='';
-  comptes().forEach(c=>{
-    const a=document.createElement('a');a.className='chip';a.textContent='@'+c;
-    a.href='https://www.instagram.com/'+c+'/';a.target='_blank';a.rel='noopener';
-    z.appendChild(a);
-  });
-  const plus=document.createElement('span');plus.className='chip';plus.textContent='＋';
-  plus.onclick=()=>{const n=prompt('Compte Instagram à suivre (sans @)');
-    if(n){const l=comptes().concat(n.replace('@','').trim());
-      localStorage.setItem(CLE_COMPTES,JSON.stringify(l));rendreComptes();}};
-  z.appendChild(plus);
+/* ---------- rubriques cibles : le pré-filtre gratuit ----------
+   Une actu qui ne rentre dans aucune de ces cases n'est pas un sujet de post
+   pour toi. C'est ce filtre qui fait le gros du ménage, avant tout appel payant.
+   L'ordre compte : le plus spécifique gagne, « Chiffre » ramasse le reste. */
+const RUBRIQUES=[
+ {cle:'ipo',nom:'IPO',mots:['introduction en bourse','ipo','entrée en bourse','cotation',
+   'première cotation','levée de fonds','valorisée','valorisation','nasdaq']},
+ {cle:'resultats',nom:'Résultats',mots:['résultats','chiffre d\'affaires','bénéfice',
+   'perte nette','trimestre','semestre','prévisions','marge','dividende']},
+ {cle:'trump',nom:'Politique éco',mots:['trump','maison blanche','droits de douane',
+   'tarifs douaniers','sanctions','la fed','bce','budget de l\'état','gouvernement',
+   'assemblée nationale','commission européenne']},
+ {cle:'epargne',nom:'Épargne',mots:['livret a','lep ','pea','assurance-vie','impôt',
+   'retraite','pouvoir d\'achat','salaire','smic','fiscalité','épargne','crédit immobilier']},
+ {cle:'tech',nom:'Tech & IA',mots:['nvidia','openai','apple','meta','tesla','microsoft',
+   'google','amazon','anthropic','intelligence artificielle',' ia ','data center','puces',
+   'spacex','samsung','netflix']},
+ {cle:'faillite',nom:'Faillite',mots:['faillite','redressement judiciaire','licenciement',
+   'plan social','suppressions de postes','liquidation','fermeture de']},
+ {cle:'chiffre',nom:'Chiffre',mots:['record','historique','milliard','s\'envole',
+   's\'effondre','franchit','dépasse']}
+];
+function rubriqueDe(a){
+  const t=(a.titre+' '+(a.resume||'')).toLowerCase();
+  return RUBRIQUES.find(r=>r.mots.some(m=>t.includes(m)))||null;
 }
 
 /* ---------- mémoire de veille : ce que j'ai écarté, mis de côté, publié ----------
@@ -650,7 +666,7 @@ function marquer(url,etat,titre){
   if(etat)MARQUES[url]={etat,t:Date.now(),titre:titre||(MARQUES[url]||{}).titre||''};
   else delete MARQUES[url];
   localStorage.setItem(CLE_MARQUES,JSON.stringify(MARQUES));
-  apprendre();rendreActus();
+  apprendre();rendreVeille();
 }
 function apprendre(){
   const w={};
@@ -670,221 +686,133 @@ function chaud(a){
 const etatDe=a=>(MARQUES[a.url]||{}).etat||'';
 const estCrypto=a=>a.theme==='crypto'||
   /\b(crypto|bitcoin|btc|ethereum|altcoin|stablecoin|blockchain|nft|token)\b/i.test(a.titre);
-/* Pages construites à la file : une actu qui ne rentre pas dans la page
-   courante (quota crypto ou source déjà prise) part sur la suivante, elle
-   n'est jamais perdue. */
-function paginer(liste,libre){
-  const q=[...liste],pages=[];
-  while(q.length){
-    const page=[],parSource={};let crypto=0,i=0;
-    while(page.length<PAR_PAGE&&i<q.length){
-      const a=q[i],c=estCrypto(a),s=a.source||dom(a.url);
-      // sur une recherche ciblée, on veut TOUT voir : pas de quota
-      if(!libre&&((c&&crypto>=1)||(parSource[s]||0)>=2)){i++;continue}
-      if(c)crypto++;parSource[s]=(parSource[s]||0)+1;
-      page.push(a);q.splice(i,1);
-    }
-    if(!page.length){pages.push(q.splice(0,PAR_PAGE));continue}
-    pages.push(page);
+/* ---------- SÉLECTION DU JOUR ----------
+   Entonnoir : pré-filtre local gratuit (rubriques + fraîcheur + doublons), puis
+   UN seul appel modèle sur la trentaine de survivants, déclenché à la main. */
+const CLE_SEL='invast_selection';
+let SEL=JSON.parse(localStorage.getItem(CLE_SEL)||'null');
+let ACTUS=[];
+
+function candidats(){
+  const vus=[],out=[];
+  for(const a of [...POOL].sort(TRIS.hot)){
+    if(etatDe(a)||a.theme==='fun')continue;
+    if(a.date&&Date.now()-a.date>3*24*3600*1000)continue;
+    const r=rubriqueDe(a);if(!r)continue;                 // hors de tes sujets
+    if(SUJETS_VUS.some(x=>similaires(x,a.titre)))continue; // déjà posté
+    if(vus.some(t=>similaires(t,a.titre)))continue;        // doublon
+    vus.push(a.titre);out.push({...a,rubrique:r.nom});
+    if(out.length>=30)break;
   }
-  return pages;
+  return out;
 }
-let FILTRE='';
-function filtrerActus(){
-  FILTRE=document.getElementById('qActu').value.trim().toLowerCase();
-  PAGE=0;rendreActus();
-}
-function rendreActus(){
-  apercuAccueil();rendreRubriques();rendreComptes();
-  if(VUE==='top')return rendreTop();
-  const liste=VUE==='hot'||VUE==='recent'||VUE==='fun';
-  const tri=TRIS[VUE==='recent'?'recent':'hot'];
-  const filtre=[];
-  for(const a of [...POOL].sort(tri)){
-    const e=etatDe(a);
-    if(liste&&e)continue;                                     // écartée ou en attente
-    if(VUE==='attente'&&e!=='attente')continue;
-    if(VUE==='masquees'&&e!=='masquee')continue;
-    if(VUE==='fun'&&a.theme!=='fun')continue;
-    if(VUE!=='fun'&&a.theme==='fun')continue;                 // le fun a son onglet
-    if(SOURCE&&(a.source||dom(a.url))!==SOURCE)continue;
-    if(FILTRE&&!(a.titre+' '+(a.resume||'')).toLowerCase().includes(FILTRE))continue;
-    if(liste&&SUJETS_VUS.some(s=>similaires(s,a.titre)))continue;  // déjà passé en post
-    if(filtre.some(v=>similaires(v.titre,a.titre)))continue;       // doublon
-    filtre.push(a);
+function candidatsFun(){
+  const vus=[],out=[];
+  for(const a of POOL.filter(x=>x.theme==='fun'&&!etatDe(x))){
+    if(!/\d[\d  .,]*\s*(milliards?|millions?|€|\$|%)/i.test(a.titre))continue;
+    if(vus.some(t=>similaires(t,a.titre)))continue;
+    vus.push(a.titre);out.push(a);
+    if(out.length>=20)break;
   }
-  PAGES=paginer(filtre,!!FILTRE||!liste);
-  if(PAGE>=PAGES.length)PAGE=Math.max(0,PAGES.length-1);
-  const zone=document.getElementById('listeActus');
-  if(!PAGES.length){
-    zone.innerHTML=FILTRE
-      ?'<p class="vide">Rien en stock pour « '+echap(FILTRE)+' » · appuie sur 🔎 pour chercher sur le web</p>'
-      :VUE==='attente'?'<p class="vide">Aucune actu mise de côté</p>'
-      :VUE==='masquees'?'<p class="vide">Aucune actu masquée</p>'
-      :VUE==='fun'?'<p class="vide">Recherche des sujets du moment…</p>'
-      :'<p class="vide">Aucune actu en stock</p>';
-    document.getElementById('pageInfo').textContent='';
-    document.getElementById('pagePrec').disabled=true;
-    document.getElementById('pageSuiv').disabled=true;return}
-  afficherActus(PAGES[PAGE]);
-  document.getElementById('pageInfo').textContent=
-    'page '+(PAGE+1)+' / '+PAGES.length+' · '+filtre.length+' actus';
-  document.getElementById('pagePrec').disabled=PAGE===0;
-  document.getElementById('pageSuiv').disabled=PAGE>=PAGES.length-1;
-}
-function pageActus(d){
-  const n=PAGE+d;if(n<0||n>=PAGES.length)return;
-  PAGE=n;rendreActus();
-  panLancer.scrollIntoView({behavior:'smooth',block:'center'});
-}
-/* Recherche ciblée : quand tu sais qu'une boîte va faire l'actu, tu vas la
-   chercher directement au lieu d'attendre qu'elle remonte dans les flux.
-   Bing News en RSS, via le proxy : gratuit, pas d'appel Claude. */
-async function chercherActuWeb(){
-  const q=document.getElementById('qActu').value.trim();
-  if(!q)return toast('Écris un mot-clé');
-  if(!proxyBase())return toast('Configure le proxy dans ⚙');
-  const zone=document.getElementById('listeActus');
-  zone.innerHTML='<p class="vide">Recherche de « '+echap(q)+' » sur le web…</p>';
-  try{
-    const u='https://www.bing.com/news/search?q='+encodeURIComponent(q)
-      +'&format=RSS&setmkt=fr-FR&_='+Date.now();
-    // Bing enveloppe chaque lien dans un redirecteur : on récupère la vraie URL
-    // sinon toutes les sources s'affichaient « bing.com »
-    const vraiLien=x=>{try{const p=new URL(x).searchParams.get('url');
-      return p?decodeURIComponent(p):x}catch(e){return x}};
-    const arts=parserFlux(await viaProxyTexte(u),'')
-      .map(a=>{const url=vraiLien(a.url);return {...a,url,source:dom(url)}})
-      // score plancher : une recherche explicite passe avant le filtre finance
-      .map(a=>({...a,score:Math.max(2,scoreActu(a)),viral:scoreViral(a)}));
-    if(!arts.length){zone.innerHTML='<p class="vide">Aucun résultat</p>';return}
-    const n=fusionner(arts);
-    toast(n?'+ '+n+' résultat'+(n>1?'s':''):'Déjà dans ta liste');
-  }catch(e){toast('Recherche impossible')}
-  PAGE=0;rendreActus();
-}
-/* Aperçu sur l'accueil : les 3 plus chaudes, pour voir sans ouvrir la page */
-function apercuAccueil(){
-  const z=document.getElementById('apercuActus');if(!z)return;
-  const top=[...POOL].filter(a=>!etatDe(a)&&a.theme!=='fun')
-    .sort(TRIS.hot).slice(0,3);
-  if(!top.length){z.innerHTML='<p class="vide">Aucune actu en stock</p>';return}
-  z.innerHTML=top.map(a=>'<div class="actuf"><div class="actuf-c">'
-    +'<a class="actuf-t" href="'+a.url+'" target="_blank" rel="noopener">'
-    +(chaud(a)>=8?'<span class="badge chaud">HOT '+chaud(a)+'</span>':'')
-    +echap(a.titre)+'</a><div class="actuf-m"><span class="pastille">'
-    +echap(a.source||dom(a.url))+'</span><span>'+ilYA(a.date)+'</span></div></div></div>').join('');
+  return out;
 }
 
-/* ---------- ⭐ Top actu : la même curation que le mode auto, sur ton stock ----------
-   Déclenché à la main uniquement : c'est le seul écran qui consomme des crédits. */
-const CLE_TOP='invast_top';
-let TOP=JSON.parse(localStorage.getItem(CLE_TOP)||'null');
-function rendreTop(){
-  const z=document.getElementById('listeActus');
-  document.getElementById('pageInfo').textContent='';
-  document.getElementById('pagePrec').disabled=true;
-  document.getElementById('pageSuiv').disabled=true;
-  const btn='<button class="btn" onclick="genererTopActu()">⭐ Générer le top actu</button>';
-  if(!TOP||!TOP.liste||!TOP.liste.length){
-    z.innerHTML='<p class="vide">Claude choisit les 5 meilleures actus de ton stock,'
-      +' avec une note et une justification.</p>'+btn;return;
-  }
-  ACTUS=TOP.liste;
-  z.innerHTML='';
-  TOP.liste.forEach((a,i)=>{
-    const d=document.createElement('div');d.className='actuf';
-    d.innerHTML='<div class="actuf-c"><a class="actuf-t" href="'+a.url+'" target="_blank" rel="noopener">'
-      +'<span class="note">'+(a.note||'')+'/10</span> '+echap(a.titre)+'</a>'
-      +'<div class="actuf-m"><span class="pastille">'+echap(a.source||dom(a.url))+'</span>'
-      +'<span>'+ilYA(a.date)+'</span></div>'
-      +(a.justification?'<div class="just">'+echap(a.justification)+'</div>':'')+'</div>';
-    const act=document.createElement('div');act.className='actuf-a';
-    const b=document.createElement('button');b.textContent='✨';b.className='pri';
-    b.title='Créer un visuel';b.onclick=()=>creerDepuisActu(i);act.appendChild(b);
-    d.appendChild(act);z.appendChild(d);
-  });
-  const p=document.createElement('div');p.style.marginTop='12px';
-  p.innerHTML='<p class="hint" style="margin-bottom:8px">Classement du '+ilYA(TOP.t)+'</p>'+btn;
-  z.appendChild(p);
-}
-async function genererTopActu(){
+async function trouverSelection(modele){
   const cle=localStorage.getItem('invast_claude');
   if(!cle)return toast('Ajoute ta clé Anthropic dans ⚙');
-  const cands=[...POOL].filter(a=>!etatDe(a)&&a.theme!=='fun').sort(TRIS.hot).slice(0,40)
-    .map(a=>({titre:a.titre,resume:(a.resume||'').slice(0,180),url:a.url,
-              source:a.source||dom(a.url),date:a.date}));
-  if(!cands.length)return toast('Stock vide');
-  const z=document.getElementById('listeActus');
-  z.innerHTML='<p class="vide">Claude analyse '+cands.length+' actus…</p>';
-  const prompt='Tu sélectionnes les actus pour @arnaud_saudrais, créateur finance perso '
-    +'sur Instagram (audience grand public française débutante).\n\n'
-    +'CRITÈRES : actu fraîche, impact concret ou chiffre marquant, compréhensible sans '
-    +'jargon, qui parle au plus grand nombre. Écarter : trop niche, trop technique, '
-    +'micro-variation de cours sans histoire, contenu pédagogique intemporel.\n\n'
-    +'CANDIDATS :\n'+JSON.stringify(cands)+'\n\n'
-    +'Note chaque candidat sur 10, fusionne les doublons, et retiens les 5 MEILLEURS.\n'
-    +'Réponds UNIQUEMENT en JSON : [{"url":"...","note":8,"justification":"une phrase, '
-    +'pourquoi ça marchera sur Instagram"}]';
+  if(!POOL.length)await chargerActus(false);
+  if(!POOL.some(a=>a.theme==='fun'))await chargerFun();
+  const A=candidats(),F=candidatsFun();
+  if(!A.length)return toast('Aucun candidat, lance ↻ d\'abord');
+  document.getElementById('blocSel').innerHTML=
+    '<p class="vide">Analyse de '+A.length+' actus…</p>';
+  const fiche=(a,i)=>i+'. ['+(a.rubrique||'fun')+'] '+a.titre
+    +' ('+(a.source||dom(a.url))+', '+ilYA(a.date)+')';
+  const prompt='Tu choisis les sujets de posts Instagram pour @arnaud_saudrais, '
+    +'créateur finance perso français (audience grand public débutante, 32k abonnés).\n\n'
+    +'CE QUI MARCHE CHEZ LUI : un chiffre qui claque, une marque que tout le monde '
+    +'connaît, un impact concret sur le portefeuille, une rupture (record, chute, '
+    +'faillite, amende). CE QUI NE MARCHE PAS : le trop niche, le trop technique, '
+    +'la micro-variation de cours, le pédagogique intemporel, le sujet déjà vu partout '
+    +'depuis 3 jours.\n\n'
+    +'ACTUS FINANCE :\n'+A.map(fiche).join('\n')+'\n\n'
+    +(F.length?'ACTUS ARGENT/FUN (le fric derrière ce dont tout le monde parle) :\n'
+      +F.map((a,i)=>fiche(a,i)).join('\n')+'\n\n':'')
+    +'Retiens les 5 MEILLEURES actus finance et les '+(F.length?'4':'0')
+    +' meilleures actus fun.\n'
+    +'Pour chacune : une note /10 et « angle » = en une phrase courte, l\'accroche '
+    +'que tu prendrais pour le post.\n'
+    +'Réponds UNIQUEMENT en JSON : '
+    +'{"actus":[{"i":0,"note":9,"angle":"..."}],"fun":[{"i":0,"note":8,"angle":"..."}]}';
   try{
     const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',
       headers:{'x-api-key':cle,'anthropic-version':'2023-06-01',
                'anthropic-dangerous-direct-browser-access':'true','content-type':'application/json'},
-      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1200,
+      body:JSON.stringify({model:modele,max_tokens:1500,
         messages:[{role:'user',content:prompt}]})});
     const txt=((await r.json()).content?.[0]?.text||'').trim();
-    const m=txt.match(/\[[\s\S]*\]/);if(!m)throw new Error('réponse illisible');
-    const choix=JSON.parse(m[0]).slice(0,5);
-    const liste=choix.map(c=>{
-      const a=POOL.find(x=>x.url===c.url);
-      return a?{...a,note:c.note,justification:c.justification}:null;
-    }).filter(Boolean);
-    if(!liste.length)throw new Error('aucune correspondance');
-    TOP={t:Date.now(),liste};localStorage.setItem(CLE_TOP,JSON.stringify(TOP));
-    toast('⭐ '+liste.length+' actus retenues');
+    const m=txt.match(/\{[\s\S]*\}/);if(!m)throw new Error('réponse illisible');
+    const j=JSON.parse(m[0]);
+    const prendre=(src,liste,n)=>(liste||[]).slice(0,n)
+      .map(c=>src[c.i]?{...src[c.i],note:c.note,angle:c.angle}:null).filter(Boolean);
+    SEL={t:Date.now(),modele,actus:prendre(A,j.actus,5),fun:prendre(F,j.fun,4)};
+    if(!SEL.actus.length)throw new Error('aucune correspondance');
+    localStorage.setItem(CLE_SEL,JSON.stringify(SEL));
+    toast('⭐ '+SEL.actus.length+' actus + '+SEL.fun.length+' fun');
   }catch(e){toast('Échec : '+String(e.message||e).slice(0,45));}
-  rendreTop();
+  rendreVeille();
 }
 
-/* ---------- 🎬 Fun : l'argent derrière ce dont tout le monde parle ----------
-   Thèmes fixes + événements détectés dans le stock du jour. */
-const CLE_FUN='invast_fun';
-const FUN_FIXE=['box-office recettes millions','salaire joueur football millions',
-  'transfert record millions','cachet artiste concert millions',
-  'budget jeux olympiques milliards','droits TV diffusion millions',
-  'sponsoring contrat millions','fortune classement milliardaires'];
-const EVENEMENTS=[['jeux olympiques','budget jeux olympiques coût'],
-  ['coupe du monde','coupe du monde retombées économiques'],
-  ['tour de france','tour de france budget prize money'],
-  ['roland-garros','roland garros prize money'],
-  ['ballon d\'or','ballon d\'or salaire'],
-  ['festival de cannes','festival de cannes budget'],
-  ['oscars','oscars retombées box-office'],
-  ['eurovision','eurovision coût budget'],
-  ['super bowl','super bowl publicité prix spot']];
-function requetesFun(){
-  const txt=POOL.map(a=>a.titre).join(' ').toLowerCase();
-  const chaudes=EVENEMENTS.filter(([k])=>txt.includes(k)).map(([,q])=>q);
-  return chaudes.concat(FUN_FIXE).slice(0,6);      // l'actualité du moment d'abord
+function carteSel(a,i){
+  const d=document.createElement('div');d.className='sel';
+  d.innerHTML='<div class="sel-h">'
+    +(a.rubrique?'<span class="rub">'+echap(a.rubrique)+'</span>':'')
+    +'<span class="actuf-m"><span class="pastille">'+echap(a.source||dom(a.url))+'</span>'
+    +'<span>'+ilYA(a.date)+'</span></span>'
+    +'<span class="sel-n">'+(a.note||'')+'/10</span></div>'
+    +'<a class="sel-t" href="'+a.url+'" target="_blank" rel="noopener">'+echap(a.titre)+'</a>'
+    +(a.angle?'<div class="sel-a">« '+echap(a.angle)+' »</div>':'');
+  const b=document.createElement('div');b.className='sel-b';
+  const btn=(t,cls,fn)=>{const x=document.createElement('button');
+    x.className='btn mini'+(cls||'');x.textContent=t;x.onclick=fn;b.appendChild(x)};
+  btn('✨ Créer',null,()=>creerDepuisActu(i));
+  btn('⏳',' sec',()=>{marquer(a.url,'attente',a.titre);retirerDeSel(a.url)});
+  btn('✕',' sec',()=>{marquer(a.url,'masquee',a.titre);retirerDeSel(a.url)});
+  d.appendChild(b);return d;
 }
-async function chargerFun(){
-  const cache=JSON.parse(localStorage.getItem(CLE_FUN)||'null');
-  if(cache&&Date.now()-cache.t<FRAICHEUR)return;
-  if(!proxyBase())return;
-  const vraiLien=x=>{try{const p=new URL(x).searchParams.get('url');
-    return p?decodeURIComponent(p):x}catch(e){return x}};
-  const lots=await Promise.all(requetesFun().map(async q=>{
-    try{const u='https://www.bing.com/news/search?q='+encodeURIComponent(q)
-      +'&format=RSS&setmkt=fr-FR&_='+Date.now();
-      return parserFlux(await viaProxyTexte(u),'').map(a=>{const url=vraiLien(a.url);
-        return {...a,url,source:dom(url),theme:'fun'}});
-    }catch(e){return []}
-  }));
-  const arts=lots.flat().map(a=>({...a,score:2,viral:scoreViral(a)}));
-  fusionner(arts);
-  localStorage.setItem(CLE_FUN,JSON.stringify({t:Date.now()}));
-  rendreActus();
+function retirerDeSel(url){
+  if(!SEL)return;
+  SEL.actus=SEL.actus.filter(a=>a.url!==url);
+  SEL.fun=SEL.fun.filter(a=>a.url!==url);
+  localStorage.setItem(CLE_SEL,JSON.stringify(SEL));rendreVeille();
 }
+function rendreVeille(){
+  rendreComptes();
+  const zs=document.getElementById('blocSel'),zf=document.getElementById('blocFun');
+  if(!zs)return;
+  document.getElementById('stockInfo').textContent=
+    POOL.length+' articles en stock · '+candidats().length+' candidats retenus par le filtre';
+  const boutons='<div class="duo" style="margin-top:6px">'
+    +'<button class="btn" onclick="trouverSelection(MODELE_RAPIDE)">'
+    +(SEL?'↻ Autres propositions':'⭐ Trouver mes 5 actus')+'</button>'
+    +'<button class="btn sec" onclick="trouverSelection(MODELE_FIN)">✦ Affiner</button></div>';
+  if(!SEL||!SEL.actus||!SEL.actus.length){
+    zs.innerHTML='<p class="vide">Le filtre garde '+candidats().length
+      +' actus dans tes rubriques. Claude en retient les 5 meilleures.</p>'+boutons;
+    zf.innerHTML='';document.getElementById('selInfo').textContent='';
+    ACTUS=[];return;
+  }
+  ACTUS=SEL.actus.concat(SEL.fun||[]);
+  zs.innerHTML='';SEL.actus.forEach((a,i)=>zs.appendChild(carteSel(a,i)));
+  const p=document.createElement('div');p.innerHTML=boutons;zs.appendChild(p);
+  zf.innerHTML='';
+  (SEL.fun||[]).forEach((a,i)=>zf.appendChild(carteSel(a,SEL.actus.length+i)));
+  if(!(SEL.fun||[]).length)zf.innerHTML='<p class="vide">Rien de marquant côté fun</p>';
+  document.getElementById('selInfo').textContent=
+    'maj '+ilYA(SEL.t)+(SEL.modele===MODELE_FIN?' · affinée':'');
+}
+const MODELE_RAPIDE='claude-haiku-4-5-20251001', MODELE_FIN='claude-sonnet-4-6';
+
 function fusionner(nouveaux){
   const connus=new Set(POOL.map(a=>a.url));
   const ajouts=nouveaux.filter(a=>!connus.has(a.url)
@@ -904,13 +832,11 @@ async function chargerActus(force){
   try{await _chargerActus(force)}finally{CHARGE_ACTUS=false}
 }
 async function _chargerActus(force){
-  const zone=document.getElementById('listeActus');
   const cache=JSON.parse(localStorage.getItem(CLE_POOL)||'null');
-  if(cache&&cache.pool){POOL=cache.pool;rendreActus();
+  if(cache&&cache.pool){POOL=cache.pool;rendreVeille();
     document.getElementById('actusMaj').textContent='maj '+ilYA(cache.t);
     if(!force&&Date.now()-cache.t<FRAICHEUR)return;}
-  if(!proxyBase()){zone.innerHTML='<p class="vide">Configure l\'URL du proxy dans ⚙</p>';return}
-  if(!POOL.length)zone.innerHTML='<p class="vide">Recherche des actus…</p>';
+  if(!proxyBase()){toast('Configure l\'URL du proxy dans ⚙');return}
   const flux=await fluxRss();
   // chaque flux renvoie son propre lot : surtout pas d'accumulation dans une
   // variable partagée, l'expression serait évaluée avant l'await et les lots
@@ -927,7 +853,7 @@ async function _chargerActus(force){
     .filter(a=>a.score>0);
   const n=fusionner(classe);
   document.getElementById('actusMaj').textContent='maj à l\'instant';
-  rendreActus();
+  rendreVeille();
   if(force)toast(n?'+ '+n+' nouvelle'+(n>1?'s':'')+' actu'+(n>1?'s':''):'Rien de nouveau');
 }
 function ilYA(ms){
@@ -935,33 +861,14 @@ function ilYA(ms){
   const h=Math.round((Date.now()-ms)/3600000);
   return h<1?'à l\'instant':h<24?'il y a '+h+' h':'il y a '+Math.round(h/24)+' j';
 }
-function afficherActus(liste){
-  ACTUS=liste;
+/* Résultats d'une recherche par mot-clé, affichés sous le champ. */
+function afficherRecherche(liste){
   const z=document.getElementById('listeActus');z.innerHTML='';
-  liste.forEach((a,i)=>{
-    const d=document.createElement('div');d.className='actuf';
-    const neuf=a.date&&(Date.now()-a.date)/3600000<4;
-    const sc=chaud(a),e=etatDe(a);
-    d.innerHTML='<div class="actuf-c">'
-      +'<a class="actuf-t" href="'+a.url+'" target="_blank" rel="noopener">'
-      +(neuf?'<span class="badge neuf">NEW</span>':'')
-      +(sc>=8?'<span class="badge chaud">HOT '+sc+'</span>':'')
-      +echap(a.titre)+'</a>'
-      +'<div class="actuf-m"><span class="pastille">'+echap(a.source||dom(a.url))+'</span>'
-      +'<span>'+ilYA(a.date)+'</span>'
-      +(sc<8?'<span class="score">🔥 '+sc+'</span>':'')+'</div></div>';
-    const act=document.createElement('div');act.className='actuf-a';
-    const bt=(txt,titre,cls,fn)=>{const b=document.createElement('button');
-      b.textContent=txt;b.title=titre;if(cls)b.className=cls;b.onclick=fn;act.appendChild(b)};
-    bt('✨','Créer un visuel','pri',()=>creerDepuisActu(i));
-    if(e){bt('↩','Remettre dans la liste','',()=>marquer(a.url,null))}
-    else{
-      bt('⏳','Mettre de côté','',()=>marquer(a.url,'attente',a.titre));
-      bt('✕','Masquer','',()=>marquer(a.url,'masquee',a.titre));
-    }
-    d.appendChild(act);z.appendChild(d);
-  });
+  if(!liste.length){z.innerHTML='<p class="vide">Aucun résultat</p>';return}
+  const base=ACTUS.length;ACTUS=ACTUS.concat(liste);
+  liste.forEach((a,k)=>z.appendChild(carteSel(a,base+k)));
 }
+
 /* Prépare le sujet et remonte au bloc Générer : le lancement (qui consomme
    des crédits) reste un geste volontaire, un clic sur « Lancer ». */
 function creerDepuisActu(i){
