@@ -198,6 +198,24 @@
   .bloc-t{display:flex;align-items:baseline;gap:10px;margin:20px 0 10px}
   .bloc-t h3{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1.6px;
     color:var(--or)}
+  .bloc-t.petit{margin:22px 0 6px}
+  .bloc-t.petit h3{font-size:10px;letter-spacing:1.2px;color:var(--gris)}
+  .bloc-t .seg{padding:3px}
+  .bloc-t .seg button{padding:5px 12px;font-size:11px}
+  /* lignes secondaires : plus légères que les cartes de la sélection */
+  .mini-l{display:flex;gap:9px;align-items:flex-start;padding:8px 0;
+    border-top:1px solid var(--bord)}
+  .mini-l:first-child{border-top:none}
+  .mini-l .c{flex:1;min-width:0}
+  .mini-l a{display:block;font-size:12.5px;font-weight:600;line-height:1.3;
+    color:var(--blanc);text-decoration:none}
+  .bloc-t.petit + div .mini-l a{font-size:11.5px;font-weight:500;color:var(--gris)}
+  .mini-l .m{font-size:10px;color:var(--gris2);margin-top:2px}
+  .mini-l button{width:30px;height:30px;padding:0;border-radius:8px;flex:none;
+    border:1px solid var(--bord);background:var(--noir);color:var(--gris);font-size:13px;
+    cursor:pointer}
+  body.clair .mini-l button{background:#FFF}
+  .mini-l button.pri{color:var(--or);border-color:var(--or)}
   .bloc-t span{font-size:11px;color:var(--gris2);margin-left:auto}
   .pager{display:flex;align-items:center;gap:10px;margin-top:10px}
   .pager button{width:auto;flex:none;padding:8px 13px;font-size:12.5px}
@@ -299,7 +317,17 @@
     <div class="bloc-t"><h3>Sélection du jour</h3><span id="selInfo"></span></div>
     <div id="blocSel"></div>
 
-    <div class="bloc-t"><h3>🎬 Angle argent</h3></div>
+    <div class="bloc-t"><h3>⏱ Fraîches</h3>
+      <span class="seg xs" style="margin:0;width:auto;flex:none">
+        <button id="fr6" onclick="setFraich(6)">6 h</button>
+        <button id="fr24" class="on" onclick="setFraich(24)">24 h</button>
+      </span></div>
+    <div id="blocFrais"></div>
+
+    <div class="bloc-t"><h3>📊 Résultats d'entreprises</h3></div>
+    <div id="blocRes"></div>
+
+    <div class="bloc-t petit"><h3>🎬 Angle argent</h3></div>
     <div id="blocFun"></div>
 
     <div class="card" style="margin-top:20px">
@@ -728,7 +756,9 @@ function candidats(){
 }
 function candidatsFun(){
   const vus=[],out=[];
-  for(const a of POOL.filter(x=>x.theme==='fun'&&!etatDe(x))){
+  for(const a of POOL.filter(x=>x.theme==='fun'&&!etatDe(x))
+      .filter(x=>x.date&&Date.now()-x.date<4*24*3600*1000)   // du frais seulement
+      .sort((x,y)=>(y.date||0)-(x.date||0))){
     if(!/\d[\d  .,]*\s*(milliards?|millions?|€|\$|%)/i.test(a.titre))continue;
     if(vus.some(t=>similaires(t,a.titre)))continue;
     vus.push(a.titre);out.push(a);
@@ -737,12 +767,16 @@ function candidatsFun(){
   return out;
 }
 
-async function trouverSelection(modele){
+async function trouverSelection(modele,renouveler){
   const cle=localStorage.getItem('invast_claude');
   if(!cle)return toast('Ajoute ta clé Anthropic dans ⚙');
   if(!POOL.length)await chargerActus(false);
   if(!POOL.some(a=>a.theme==='fun'))await chargerFun();
-  const A=candidats(),F=candidatsFun();
+  // « Autres propositions » écarte ce qui vient d'être proposé, sinon le modèle
+  // reproposait les mêmes têtes de liste et le bouton semblait ne rien faire.
+  const dejaVus=renouveler&&SEL?new Set((SEL.actus||[]).concat(SEL.fun||[]).map(a=>a.url)):new Set();
+  const A=candidats().filter(a=>!dejaVus.has(a.url));
+  const F=candidatsFun().filter(a=>!dejaVus.has(a.url));
   if(!A.length)return toast('Aucun candidat, lance ↻ d\'abord');
   document.getElementById('blocSel').innerHTML=
     '<p class="vide">Analyse de '+A.length+' actus…</p>';
@@ -806,6 +840,57 @@ function retirerDeSel(url){
   SEL.fun=SEL.fun.filter(a=>a.url!==url);
   localStorage.setItem(CLE_SEL,JSON.stringify(SEL));rendreVeille();
 }
+let FRAICH=24;
+function setFraich(h){FRAICH=h;
+  document.getElementById('fr6').classList.toggle('on',h===6);
+  document.getElementById('fr24').classList.toggle('on',h===24);
+  rendreVeille();}
+function sansDoublon(l,n){
+  const vus=[],out=[];
+  for(const a of l){if(vus.some(t=>similaires(t,a.titre)))continue;
+    vus.push(a.titre);out.push(a);if(out.length>=n)break}
+  return out;
+}
+/* Ce qui vient de tomber, classé par potentiel : gratuit, aucun appel modèle. */
+function fraiches(){
+  return sansDoublon(POOL.filter(a=>!etatDe(a)&&a.theme!=='fun'&&a.date
+      &&Date.now()-a.date<FRAICH*3600000&&rubriqueDe(a))
+    .sort(TRIS.hot),6);
+}
+/* Résultats d'entreprises : on remonte d'abord les noms que l'audience connaît. */
+function resultatsEntreprises(){
+  const cible=POOL.filter(a=>{
+    if(etatDe(a)||a.theme==='fun')return false;
+    if(a.date&&Date.now()-a.date>5*24*3600*1000)return false;
+    const r=rubriqueDe(a);
+    const t=(a.titre+' '+(a.resume||'')).toLowerCase();
+    return (r&&r.cle==='resultats')||/résultats|chiffre d'affaires|bénéfice|perte nette/.test(t);
+  }).sort((x,y)=>{
+    const c=a=>BOITES.some(m=>(a.titre+' '+a.resume).toLowerCase().includes(m))?1:0;
+    return c(y)-c(x)||chaud(y)-chaud(x);
+  });
+  return sansDoublon(cible,6);
+}
+function ligneActu(a,i){
+  const d=document.createElement('div');d.className='mini-l';
+  const r=a.rubrique||(rubriqueDe(a)||{}).nom;
+  d.innerHTML='<div class="c"><a href="'+a.url+'" target="_blank" rel="noopener">'
+    +echap(a.titre)+'</a><div class="m">'+(r?echap(r)+' · ':'')
+    +echap(a.source||dom(a.url))+' · '+ilYA(a.date)
+    +(chaud(a)?' · 🔥 '+chaud(a):'')+'</div></div>';
+  const b=(t,cls,fn)=>{const x=document.createElement('button');x.textContent=t;
+    if(cls)x.className=cls;x.onclick=fn;d.appendChild(x)};
+  b('✨','pri',()=>creerDepuisActu(i));
+  b('✕',null,()=>{marquer(a.url,'masquee',a.titre);rendreVeille()});
+  return d;
+}
+function remplirBloc(id,liste){
+  const z=document.getElementById(id);if(!z)return;
+  z.innerHTML='';
+  if(!liste.length){z.innerHTML='<p class="vide">Rien pour l\'instant</p>';return}
+  const base=ACTUS.length;ACTUS=ACTUS.concat(liste);
+  liste.forEach((a,k)=>z.appendChild(ligneActu(a,base+k)));
+}
 function rendreVeille(){
   rendreComptes();
   const zs=document.getElementById('blocSel'),zf=document.getElementById('blocFun');
@@ -813,23 +898,29 @@ function rendreVeille(){
   document.getElementById('stockInfo').textContent=
     POOL.length+' articles en stock · '+candidats().length+' candidats retenus par le filtre';
   const boutons='<div class="duo" style="margin-top:6px">'
-    +'<button class="btn" onclick="trouverSelection(MODELE_RAPIDE)">'
-    +(SEL?'↻ Autres propositions':'⭐ Trouver mes 5 actus')+'</button>'
-    +'<button class="btn sec" onclick="trouverSelection(MODELE_FIN)">✦ Affiner</button></div>';
+    +'<button class="btn" onclick="trouverSelection(MODELE_RAPIDE,true)">'
+    +(SEL?'↻ 5 autres actus':'⭐ Trouver mes 5 actus')+'</button>'
+    +(SEL?'<button class="btn sec" onclick="trouverSelection(MODELE_FIN,false)">'
+      +'✦ Re-juger (Sonnet)</button>':'')+'</div>'
+    +(SEL?'<p class="hint" style="margin-top:6px">↻ propose 5 sujets différents · '
+      +'✦ refait le même tri avec un modèle plus fin</p>':'');
   if(!SEL||!SEL.actus||!SEL.actus.length){
     zs.innerHTML='<p class="vide">Le filtre garde '+candidats().length
       +' actus dans tes rubriques. Claude en retient les 5 meilleures.</p>'+boutons;
-    zf.innerHTML='';document.getElementById('selInfo').textContent='';
-    ACTUS=[];return;
+    document.getElementById('selInfo').textContent='';
+    ACTUS=[];
+    remplirBloc('blocFrais',fraiches());
+    remplirBloc('blocRes',resultatsEntreprises());
+    zf.innerHTML='<p class="vide">Lance la sélection pour remplir ce bloc</p>';return;
   }
-  ACTUS=SEL.actus.concat(SEL.fun||[]);
+  ACTUS=SEL.actus.slice();
   zs.innerHTML='';SEL.actus.forEach((a,i)=>zs.appendChild(carteSel(a,i)));
   const p=document.createElement('div');p.innerHTML=boutons;zs.appendChild(p);
-  zf.innerHTML='';
-  (SEL.fun||[]).forEach((a,i)=>zf.appendChild(carteSel(a,SEL.actus.length+i)));
-  if(!(SEL.fun||[]).length)zf.innerHTML='<p class="vide">Rien de marquant côté fun</p>';
   document.getElementById('selInfo').textContent=
-    'maj '+ilYA(SEL.t)+(SEL.modele===MODELE_FIN?' · affinée':'');
+    'maj '+ilYA(SEL.t)+(SEL.modele===MODELE_FIN?' · re-jugée':'');
+  remplirBloc('blocFrais',fraiches());
+  remplirBloc('blocRes',resultatsEntreprises());
+  remplirBloc('blocFun',(SEL.fun||[]));
 }
 const MODELE_RAPIDE='claude-haiku-4-5-20251001', MODELE_FIN='claude-sonnet-4-6';
 
