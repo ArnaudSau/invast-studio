@@ -644,6 +644,7 @@ let SUJETS_VUS=[];   // sujets déjà transformés en posts (via l'historique)
 /* Un seul stock d'actus (POOL), trois tris, une pagination 5 par 5.
    « Actualiser » n'échange plus la sélection : il va chercher les flux et
    AJOUTE au stock les articles qu'on n'avait pas encore. */
+let MAJ_POOL=0;
 const CLE_POOL='invast_pool', RETENTION=3*24*3600*1000, PAR_PAGE=5;
 let POOL=[];
 const TRIS={
@@ -896,7 +897,8 @@ function rendreVeille(){
   const zs=document.getElementById('blocSel'),zf=document.getElementById('blocFun');
   if(!zs)return;
   document.getElementById('stockInfo').textContent=
-    POOL.length+' articles en stock · '+candidats().length+' candidats retenus par le filtre';
+    POOL.length+' articles en stock · '+candidats().length+' candidats retenus par le filtre'
+    +(MAJ_POOL?' · maj '+ilYA(MAJ_POOL):'');
   const boutons='<div class="duo" style="margin-top:6px">'
     +'<button class="btn" onclick="trouverSelection(MODELE_RAPIDE,true)">'
     +(SEL?'↻ 5 autres actus':'⭐ Trouver mes 5 actus')+'</button>'
@@ -944,8 +946,7 @@ async function chargerActus(force){
 }
 async function _chargerActus(force){
   const cache=JSON.parse(localStorage.getItem(CLE_POOL)||'null');
-  if(cache&&cache.pool){POOL=cache.pool;rendreVeille();
-    document.getElementById('actusMaj').textContent='maj '+ilYA(cache.t);
+  if(cache&&cache.pool){POOL=cache.pool;MAJ_POOL=cache.t;rendreVeille();
     if(!force&&Date.now()-cache.t<FRAICHEUR)return;}
   if(!proxyBase()){toast('Configure l\'URL du proxy dans ⚙');return}
   const flux=await fluxRss();
@@ -962,8 +963,7 @@ async function _chargerActus(force){
   }));
   const classe=lots.flat().map(a=>({...a,score:scoreActu(a),viral:scoreViral(a)}))
     .filter(a=>a.score>0);
-  const n=fusionner(classe);
-  document.getElementById('actusMaj').textContent='maj à l\'instant';
+  const n=fusionner(classe);MAJ_POOL=Date.now();
   rendreVeille();
   if(force)toast(n?'+ '+n+' nouvelle'+(n>1?'s':'')+' actu'+(n>1?'s':''):'Rien de nouveau');
 }
