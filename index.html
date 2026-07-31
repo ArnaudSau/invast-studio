@@ -805,16 +805,30 @@ async function trouverSelection(modele,renouveler){
                'anthropic-dangerous-direct-browser-access':'true','content-type':'application/json'},
       body:JSON.stringify({model:modele,max_tokens:1500,
         messages:[{role:'user',content:prompt}]})});
-    const txt=((await r.json()).content?.[0]?.text||'').trim();
-    const m=txt.match(/\{[\s\S]*\}/);if(!m)throw new Error('réponse illisible');
+    const rep=await r.json();
+    if(rep.error){
+      // le modèle rapide peut être indisponible sur le compte : on bascule
+      if(modele!==MODELE_FIN&&/model/i.test(rep.error.message||'')){
+        toast('Modèle rapide indisponible, passage au modèle fin');
+        return trouverSelection(MODELE_FIN,renouveler);
+      }
+      throw new Error(rep.error.message||rep.error.type||'erreur API');
+    }
+    const txt=(rep.content?.[0]?.text||'').trim();
+    const m=txt.match(/\{[\s\S]*\}/);
+    if(!m)throw new Error('réponse illisible : '+txt.slice(0,60));
     const j=JSON.parse(m[0]);
     const prendre=(src,liste,n)=>(liste||[]).slice(0,n)
-      .map(c=>src[c.i]?{...src[c.i],note:c.note,angle:c.angle}:null).filter(Boolean);
-    SEL={t:Date.now(),modele,actus:prendre(A,j.actus,5),fun:prendre(F,j.fun,4)};
-    if(!SEL.actus.length)throw new Error('aucune correspondance');
+      .map(c=>src[+c.i]?{...src[+c.i],note:c.note,angle:c.angle}:null).filter(Boolean);
+    const actus=prendre(A,j.actus,5);
+    if(!actus.length)throw new Error('aucune actu retenue');   // on garde l'ancienne
+    SEL={t:Date.now(),modele,actus,fun:prendre(F,j.fun,4)};
     localStorage.setItem(CLE_SEL,JSON.stringify(SEL));
     toast('⭐ '+SEL.actus.length+' actus + '+SEL.fun.length+' fun');
-  }catch(e){toast('Échec : '+String(e.message||e).slice(0,45));}
+  }catch(e){
+    console.error('sélection',e);
+    toast('Échec : '+String(e.message||e).slice(0,90));
+  }
   rendreVeille();
 }
 
