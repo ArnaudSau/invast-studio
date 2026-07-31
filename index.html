@@ -715,6 +715,40 @@ function chaud(a){
 const etatDe=a=>(MARQUES[a.url]||{}).etat||'';
 const estCrypto=a=>a.theme==='crypto'||
   /\b(crypto|bitcoin|btc|ethereum|altcoin|stablecoin|blockchain|nft|token)\b/i.test(a.titre);
+/* ---------- 🎬 Angle argent : l'argent derrière ce dont tout le monde parle ----------
+   Thèmes fixes + événements repérés dans le stock du jour. Gratuit (Bing News). */
+const CLE_FUN='invast_fun';
+const FUN_FIXE=['box-office recettes millions','salaire joueur football millions',
+  'transfert record millions','budget jeux olympiques milliards',
+  'droits TV diffusion millions','fortune classement milliardaires'];
+const EVENEMENTS=[['jeux olympiques','budget jeux olympiques coût'],
+  ['coupe du monde','coupe du monde retombées économiques'],
+  ['tour de france','tour de france primes budget'],
+  ['roland-garros','roland garros prize money'],
+  ['ballon d\'or','ballon d\'or salaire'],
+  ['festival de cannes','festival de cannes budget'],
+  ['oscars','oscars retombées box-office'],
+  ['super bowl','super bowl publicité prix spot']];
+function requetesFun(){
+  const txt=POOL.map(a=>a.titre).join(' ').toLowerCase();
+  return EVENEMENTS.filter(([k])=>txt.includes(k)).map(([,q])=>q)
+    .concat(FUN_FIXE).slice(0,6);          // l'actualité du moment d'abord
+}
+async function chargerFun(){
+  const cache=JSON.parse(localStorage.getItem(CLE_FUN)||'null');
+  if(cache&&Date.now()-cache.t<FRAICHEUR)return;
+  if(!proxyBase())return;
+  const lots=await Promise.all(requetesFun().map(async q=>{
+    try{const u='https://www.bing.com/news/search?q='+encodeURIComponent(q)
+      +'&format=RSS&setmkt=fr-FR&_='+Date.now();
+      return parserFlux(await viaProxyTexte(u),'')
+        .map(a=>({...a,source:dom(a.url),theme:'fun'}));
+    }catch(e){return []}
+  }));
+  fusionner(lots.flat().map(a=>({...a,score:2,viral:scoreViral(a)})));
+  localStorage.setItem(CLE_FUN,JSON.stringify({t:Date.now()}));
+}
+
 /* ---------- comptes Instagram à surveiller (ouverture directe) ---------- */
 const CLE_COMPTES='invast_comptes';
 const COMPTES_DEF=['aktionnaire','bourseko','zonebourse','francecrypto'];
